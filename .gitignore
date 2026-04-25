@@ -1,0 +1,17 @@
+__pycache__/
+bin/
+build/
+install/
+log/
+*.o
+*.so
+*.a
+
+.idea/
+.vscode/
+.venv/
+
+*.log
+*.tmp
+*.pth
+*.onnx
