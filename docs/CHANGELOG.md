@@ -4,6 +4,43 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v1.0-hw4-ballistic — Stage 6 (2026-04-29)
+
+Ballistic + iterative aim-prediction solver. Closes the
+detection → tracking → shooting math chain (HW1 → HW3 → HW4); HW6
+will wire all three behind a runtime in Stage 8.
+
+* **HW4 directory:** `HW4_ballistic/` — bilingual README, CMakeLists
+  with Eigen3 skip-guard, ~700 LOC across 2 headers + 2 sources +
+  3 tests.
+* **filled:** `ProjectileParams` (RM 17 mm defaults: 3.2 g pellet,
+  sphere drag, ρ = 1.225); `projectile_acceleration` (gravity +
+  quadratic drag); `projectile_position_at` /
+  `projectile_velocity_at` via RK4 substepping (1 ms default → 1 mm
+  precision over 30 m flight). Convention: Z-up world,
+  g = (0, 0, -9.81).
+* **two candidate TODOs in `source/solver.cpp`:**
+  * `solve_flight_time` — closest-approach time-of-flight along a
+    given aim direction. Coarse 10 ms scan + bracketed refinement.
+    Closed-form short-circuit when both drag and gravity are zero.
+  * `plan_shot` — iterative lead computation. Pick a t guess from
+    range/speed, predict the target's future position, solve for the
+    aim direction, re-solve flight time under drag, iterate until
+    miss distance < tolerance.
+* **public tests:** three GTest binaries —
+  * `hw4_1d_no_drag_test` (range/speed, static-target aim, moving-target lead)
+  * `hw4_2d_with_gravity_test` (aim lifts above target; farther → more lift)
+  * `hw4_3d_with_drag_test` (converges ≤ 8 iter; lead match within 1 cm; ≥ 95% hit rate on a 32-target sweep)
+  Each detects unfilled TODOs and `GTEST_SKIP`s cleanly.
+* **CMake:** root project bumped to **1.0.0**; HW4 wired in behind
+  the same EXISTS guard.
+
+Out of scope (in `HW4_ballistic/README.md`): Magnus / spin, wind,
+projectile-projectile collisions, heat / barrel limits (those live
+in HW6's runner). The IMPLEMENTATION_PLAN hit-rate-at-5/10/15 m bar
+is a system-level measurement that needs HW3 + HW4 + a real Godot
+arena — HW4 in isolation only pins the math.
+
 ## v0.9-hw3-ekf — Stage 5 (2026-04-29)
 
 The state estimator that consumes HW1's detections and feeds HW4 +
