@@ -47,8 +47,13 @@ def _godot_bundle(*, oracle: bool, frame_id: int = 0) -> dict:
             "linear_accel": {"x": 0.0, "y": -9.81, "z": 0.0},
             "orientation": {"w": 1.0, "x": 0.0, "y": 0.0, "z": 0.0},
         },
-        "gimbal": {"stamp_ns": 1_000_000, "yaw": 0.0, "pitch": 0.0,
-                   "yaw_rate": 0.0, "pitch_rate": 0.0},
+        "gimbal": {
+            "stamp_ns": 1_000_000,
+            "yaw": 0.0,
+            "pitch": 0.0,
+            "yaw_rate": 0.0,
+            "pitch_rate": 0.0,
+        },
         "odom": {
             "stamp_ns": 1_000_000,
             "position_world": {"x": -3.0, "y": 0.0, "z": 0.0},
@@ -91,6 +96,8 @@ def test_env_reset_request_parses() -> None:
     req = json_format.ParseDict(payload, aiming_pb2.EnvResetRequest())
     assert req.seed == 42
     assert req.opponent_tier == "bronze"
+    assert req.oracle_hints is True
+    assert req.duration_ns == 90_000_000_000
 
 
 def test_gimbal_cmd_parses() -> None:
@@ -98,6 +105,8 @@ def test_gimbal_cmd_parses() -> None:
                "yaw_rate_ff": 0.1, "pitch_rate_ff": 0.0}
     cmd = json_format.ParseDict(payload, sensor_pb2.GimbalCmd())
     assert cmd.target_yaw == pytest.approx(0.5)
+    assert cmd.target_pitch == pytest.approx(-0.25)
+    assert cmd.yaw_rate_ff == pytest.approx(0.1)
 
 
 def test_fire_cmd_parses() -> None:
@@ -112,6 +121,7 @@ def test_sensor_bundle_without_oracle_parses(bundle_builder) -> None:
     assert bundle.frame.height == 720
     assert bundle.frame.pixel_format == sensor_pb2.FrameRef.PIXEL_FORMAT_RGB888
     assert bundle.imu.linear_accel.y == pytest.approx(-9.81)
+    assert bundle.odom.position_world.x == pytest.approx(-3.0)
     assert not bundle.HasField("oracle")
 
 
@@ -120,6 +130,7 @@ def test_sensor_bundle_with_oracle_parses(bundle_builder) -> None:
     bundle = json_format.ParseDict(payload, sensor_pb2.SensorBundle())
     assert bundle.HasField("oracle")
     assert bundle.oracle.target_position_world.x == pytest.approx(3.0)
+    assert bundle.oracle.target_visible is True
 
 
 def test_initial_state_parses(bundle_builder) -> None:
@@ -130,6 +141,7 @@ def test_initial_state_parses(bundle_builder) -> None:
         "simulator_build_sha256": sim_sha,
     }
     msg = json_format.ParseDict(payload, aiming_pb2.InitialState())
+    assert msg.zmq_frame_endpoint == "tcp://127.0.0.1:7655"
     assert msg.simulator_build_sha256 == sim_sha
 
 
@@ -162,10 +174,20 @@ def test_episode_stats_with_events_parses() -> None:
     assert msg.outcome == episode_pb2.EpisodeStats.OUTCOME_TIMEOUT
     assert msg.armor_hits == 4
     assert len(msg.events) == 2
+    assert msg.events[0].kind == episode_pb2.ProjectileEvent.KIND_FIRED
+    assert msg.events[1].kind == episode_pb2.ProjectileEvent.KIND_HIT_ARMOR
+    assert msg.events[1].armor_id == "red.front"
 
 
 def test_length_prefix_round_trip() -> None:
-    import json, struct
+    """Sanity-check the 4-byte big-endian length prefix used by
+    tcp_proto_server.gd.
+
+    Both sides hand-encode the prefix; any mismatch (BE vs LE, signed
+    vs unsigned, off-by-one) produces a hung connection at runtime.
+    """
+    import json
+    import struct
     payload = {"method": "env_reset", "request": {"seed": 1, "opponent_tier": "bronze"}}
     body = json.dumps(payload).encode("utf-8")
     n = len(body)
