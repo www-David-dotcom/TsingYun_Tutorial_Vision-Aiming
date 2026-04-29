@@ -1,0 +1,66 @@
+[gd_scene load_steps=8 format=3 uid="uid://chassis"]
+
+[ext_resource type="Script" path="res://scripts/chassis.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://armorplate" path="res://scenes/armor_plate.tscn" id="2_plate"]
+[ext_resource type="PackedScene" uid="uid://gimbal" path="res://scenes/gimbal.tscn" id="3_gimbal"]
+
+[sub_resource type="BoxMesh" id="mesh_body"]
+size = Vector3(0.45, 0.18, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.18, 0.22, 0.28, 1)
+metallic = 0.6
+roughness = 0.5
+
+[sub_resource type="BoxShape3D" id="shape_body"]
+size = Vector3(0.45, 0.18, 0.55)
+
+[sub_resource type="CylinderMesh" id="mesh_wheel"]
+top_radius = 0.07
+bottom_radius = 0.07
+height = 0.04
+
+[node name="Chassis" type="CharacterBody3D"]
+script = ExtResource("1_script")
+collision_layer = 1
+collision_mask = 3
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16, 0)
+mesh = SubResource("mesh_body")
+material_override = SubResource("mat_body")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16, 0)
+shape = SubResource("shape_body")
+
+[node name="WheelFL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.255, 0.07, -0.235)
+mesh = SubResource("mesh_wheel")
+
+[node name="WheelFR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.255, 0.07, -0.235)
+mesh = SubResource("mesh_wheel")
+
+[node name="WheelRL" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.255, 0.07, 0.235)
+mesh = SubResource("mesh_wheel")
+
+[node name="WheelRR" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 0.255, 0.07, 0.235)
+mesh = SubResource("mesh_wheel")
+
+[node name="ArmorPlateFront" parent="." instance=ExtResource("2_plate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16, -0.281)
+
+[node name="ArmorPlateBack" parent="." instance=ExtResource("2_plate")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0.16, 0.281)
+
+[node name="ArmorPlateLeft" parent="." instance=ExtResource("2_plate")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -0.231, 0.16, 0)
+
+[node name="ArmorPlateRight" parent="." instance=ExtResource("2_plate")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 0.231, 0.16, 0)
+
+[node name="Gimbal" parent="." instance=ExtResource("3_gimbal")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.30, 0)
