@@ -1,0 +1,36 @@
+# Example behaviour tree for HW7. The dsl_to_cpp.py codegen reads
+# this file and emits a buildable C++ source under
+# `generated/example_bt.cpp`. The candidate either:
+#   * Edits this YAML and re-runs the codegen, or
+#   * Writes the BT directly in C++ via `behavior_tree.hpp`'s
+#     factory functions (sequence/selector/action).
+#
+# The supported node kinds are: sequence, selector, action.
+# Action nodes reference one of the four leaf functions in
+# `leaf_actions.hpp`: engage, retreat_to_cover, patrol, reload.
+
+root:
+  kind: selector
+  label: root
+  children:
+    - kind: sequence
+      label: low_hp_branch
+      children:
+        - kind: action
+          label: check_should_retreat
+          # Special action — wraps `should_retreat` (TODO in
+          # strategy.cpp). The codegen generates a one-line lambda
+          # that returns Success/Failure based on the bool result.
+          leaf: should_retreat_check
+        - kind: action
+          label: retreat
+          leaf: retreat_to_cover
+    - kind: sequence
+      label: low_ammo_branch
+      children:
+        - kind: action
+          label: reload_if_needed
+          leaf: reload
+    - kind: action
+      label: engage_or_patrol
+      leaf: engage_or_patrol
