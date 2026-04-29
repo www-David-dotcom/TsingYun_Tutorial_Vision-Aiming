@@ -4,6 +4,71 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v1.4-grading-v1 — Stage 10 (2026-04-29)
+
+Grading workflow v1, picked from four reviewed proposals as **Proposal A**:
+auto-graded public tests on every PR + a daily leaderboard cron, with
+the actual hire decision made by team review + interview of top-N.
+Cheapest of the four (~2 days of build-out vs. 10–14 for the full
+team-side hidden-grader option). The heavier alternatives (hidden
+tests, simulator-driven episodes, build-artefact hash binding) are
+recorded as future-cycle targets in `docs/grading.md`.
+
+* **`.github/workflows/validate_submission.yml`** — PR-triggered
+  workflow on `pull_request: opened|synchronize|reopened|ready_for_review`.
+  Checks out `head.sha`, installs the C++ toolchain, `uv sync`, builds,
+  runs `ctest --output-junit` + `pytest --junit-xml`, scores via
+  `tools/leaderboard/score_pr.py`, posts (or updates in place via the
+  `<!-- aiming-hw-grader -->` marker) a single PR comment with the
+  per-HW pass/fail/skip breakdown. Uploads the score artefact for 30
+  days. Concurrency-cancels on push so candidate iteration is cheap.
+  Timeout: 25 minutes.
+* **`.github/workflows/regenerate_leaderboard.yml`** — daily cron at
+  19:17 Beijing-local (`17 11 * * *` UTC, per resolved decision 8).
+  Walks every open PR, pulls the latest `submission-score-*` artefact
+  via `gh run download`, sorts by total passing tests with HW-breadth
+  tiebreaker, writes `leaderboard.{md,csv,json}` to an orphan
+  `leaderboard` branch. Branch is internal-only — candidates working
+  on `main` don't see it.
+* **`tools/leaderboard/score_pr.py`** — JUnit XML parser. Buckets
+  test cases by HW prefix or fixture path, emits both
+  `submission_score.json` (machine-readable) and `submission_score.md`
+  (PR-comment body). Skipped tests don't count for or against; only
+  fails are penalised, so a candidate isn't punished for the
+  ONNX-Runtime / acados toolchains skipping on stock `ubuntu-latest`.
+* **`tools/leaderboard/aggregate.py`** — driven by the daily cron.
+  Uses `gh pr list` + `gh run list --commit head_sha` +
+  `gh run download` to pull every PR's latest score, sorts, writes
+  the three leaderboard files.
+* **`docs/grading.md`** — bilingual (Chinese-primary) candidate
+  handbook: submission flow (fork → fill TODOs → PR with `姓名 - 学号`
+  title), what gets graded (passing public tests, skip-doesn't-count),
+  what's known-skipped, troubleshooting (CI didn't run? draft PR.
+  Apt failed? empty commit retry), team-side ops notes (cron schedule,
+  manual re-trigger, local aggregate.py invocation).
+* **`schema.md` §7** — was a deferred stub; now filled in with the
+  v1 grading policy. Subsections: what gets graded, where it runs,
+  how candidates submit, leaderboard cadence, anti-cheat posture,
+  what's intentionally not in v1.
+* **`IMPLEMENTATION_PLAN.md` Stage 10** — superseded v0.3 sketch
+  replaced with the v1 design (~700 LOC: 200 YAML + 350 Python +
+  150 docs). Plan version bumped to 0.5; the eight resolved decisions
+  unblocked (decisions 3, 5, 6, 7 were tagged `[grading — deferred]`
+  and are now resolved).
+* **CMake:** root project bumped to **1.4.0**. No new C++ targets;
+  Stage 10 is pure-tooling.
+
+What's deliberately not in v1 (recorded as future-cycle targets in
+`docs/grading.md`'s last section): hidden tests + team-side simulator-
+driven episode evaluation, live-arena vs bronze/silver/gold matches,
+`submissions/` directory pattern with `make grade` / `make submit`,
+public Pages deploy for the leaderboard, internal-volunteer pilot run.
+
+With v1.4, **HW1–HW7 + grading workflow are all landed**. The
+TsingYun Vision Group recruitment cycle can run end-to-end on this
+repo: candidates fork → fill TODOs → PR → CI scores → daily
+leaderboard → team interview top-N.
+
 ## v1.3-hw7-strategy — Stage 9 (2026-04-29)
 
 Last active stage. HW7 strategy bonus — behaviour-tree DSL +

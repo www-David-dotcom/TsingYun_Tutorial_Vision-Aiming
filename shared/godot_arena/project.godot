@@ -1,24 +1,25 @@
-; Aiming Arena — Godot 4 project descriptor.
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
 ;
-; Engine version: Godot 4.3+ stable. The arena is fully headless-capable
-; (--headless --write-movie or --rendering-driver=opengl3 inside Docker)
-; so the same project file ships to candidates, the team, and CI.
-;
-; Stage 2 transport: length-prefixed JSON over TCP for control, raw
-; RGB888 over a second TCP socket for frames. See docs/godot_arena.md
-; for the rationale (gRPC GDExtension is deferred; the proto contract
-; is preserved via google.protobuf.json_format).
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
+
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
 config/name="Aiming Arena"
 config/description="TsingYun RoboMaster recruitment-cycle simulator. Stage 2 PoC."
 run/main_scene="res://scenes/arena_main.tscn"
-config/features=PackedStringArray("4.3", "Forward Plus")
-config/icon="res://icon.svg"
+config/features=PackedStringArray("4.6", "Forward Plus")
 boot_splash/show_image=false
+config/icon="res://icon.svg"
 
 [autoload]
 
@@ -26,7 +27,6 @@ SeedRng="*res://scripts/seed_rng.gd"
 
 [debug]
 
-settings/stdout/print_fps=false
 settings/stdout/verbose_stdout=true
 
 [display]
@@ -40,10 +40,8 @@ window/vsync/vsync_mode=0
 
 common/physics_ticks_per_second=120
 3d/default_gravity=9.81
-3d/default_gravity_vector=Vector3(0, -1, 0)
 
 [rendering]
 
-renderer/rendering_method="forward_plus"
 anti_aliasing/quality/msaa_3d=2
 environment/defaults/default_environment="res://default_env.tres"

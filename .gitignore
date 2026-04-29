@@ -46,7 +46,10 @@ shared/opponents/*.bin
 data/raw/
 data/synthetic/
 
-# Godot exports
+# Godot exports + import cache (Godot 4 generates `.godot/` per
+# project on first open; never commit). `.uid` files DO get
+# committed — they pin script IDs across editors per Godot 4.4+ docs.
+shared/godot_arena/.godot/
 shared/godot_arena/.import/
 shared/godot_arena/builds/
 shared/godot_arena/*.x86_64
