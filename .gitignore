@@ -63,3 +63,6 @@ htmlcov/
 
 # macOS metadata files (the dot-underscore noise that already plagues this checkout)
 ._*
+
+# Superpowers brainstorming workspace (visual companion mockups, transient state)
+.superpowers/
