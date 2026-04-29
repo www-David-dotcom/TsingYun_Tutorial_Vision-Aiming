@@ -111,5 +111,22 @@ visibility  = "private"
 local_path  = "out/assets/policies/silver.pt"
 description = "Frozen silver-tier opponent policy. One step harder than bronze — adds dodge + counter-fire behaviours so HW3's tracker has a moving target with non-trivial maneuver patterns. Placeholder digest."
 
+# --- Stage 7 (v1.1-hw5-mpc) ---
+# acados-codegened MPC solver tarball. The team runs
+# `python HW5_mpc_gimbal/src/generate_acados.py` once on a workstation
+# with the upstream acados C library installed, then push_assets.py
+# uploads the resulting generated_solver/acados_aiming_mpc/ tree as a
+# tarball. Candidates pull anonymously instead of installing acados.
+
+[[asset]]
+name        = "acados-solver-hw5-v1.1"
+bucket      = "tsingyun-aiming-hw-models"
+key         = "assets/HW5/acados_solver_v1.1.tar.gz"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "private"
+local_path  = "out/assets/HW5/acados_solver_v1.1.tar.gz"
+description = "acados-codegened C library + headers for the HW5 MPC. Untar to HW5_mpc_gimbal/generated_solver/ before configuring the build. Placeholder digest until the team runs the codegen + push."
+
 # Add new entries below as later stages need them. Sort by name within each
 # visibility class to keep diffs reviewable.

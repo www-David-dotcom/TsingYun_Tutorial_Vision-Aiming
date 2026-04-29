@@ -4,6 +4,57 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v1.1-hw5-mpc — Stage 7 (2026-04-29)
+
+MPC gimbal controller + the engine quality gate. Multi-language
+(CasADi → acados-codegened C → C++ runtime), with a filled PID
+baseline as the floor the candidate's MPC must beat.
+
+* **HW5 directory:** `HW5_mpc_gimbal/` — bilingual README, opt-in
+  `hw5` uv group (casadi, acados-template, matplotlib), CMakeLists
+  with two build modes (PID-only vs PID+MPC, depending on whether
+  `generated_solver/acados_aiming_mpc/CMakeLists.txt` exists).
+* **Python (filled):**
+  `src/cost.py` — quadratic stage + terminal cost from
+  `configs/mpc_weights.yaml`.
+  `src/generate_acados.py` — team-side codegen with a `--check` mode
+  that validates the model + cost without invoking acados (useful
+  for candidates without acados installed).
+  `src/tune.py` — closed-loop PD-baseline sweep so candidates can
+  iterate on gain values without waiting for codegen.
+* **Python TODO sites in `src/model.py`:**
+  * `motor_torque_lag` — first-order lag from torque cmd to applied
+    torque, two CasADi expressions.
+  * `state_dot` — assemble the full 6-vector dx/dt; kinematic terms
+    are filled, the candidate plugs in the lag dynamics.
+* **C++ (filled):** `pid_baseline.{hpp,cpp}` — two-axis PD with
+  velocity feedforward, hard rate + torque limits. Default gains
+  settle a 30° step in ~120 ms with no overshoot.
+* **C++ TODO site in `source/controller.cpp`:** wire the acados
+  capsule through the `step` API. Header file is filled. While the
+  TODO is unfilled, `MpcController::step` falls back to a tiny-gain
+  proportional command so the binary still compiles and the
+  controller's interface tests pass even without codegen.
+* **Public tests (PID path):**
+  `hw5_step_response_test` — settling < 200 ms, overshoot < 5%,
+  torque respects hard limit.
+  `hw5_sinusoid_tracking_test` — 1 Hz / 0.5 rad reference, RMSE
+  in steady state < 0.05 rad.
+* **Engine quality gate template:**
+  `docs/visual_review_2026-04-29.md` is the meeting agenda for the
+  Godot-vs-Unity decision called for in `schema.md` §10 decision 1.
+  Decision is TBD; document captures attendees, criteria, action-
+  item slots.
+* **Manifest:** `acados-solver-hw5-v1.1` row in the private models
+  bucket — the team's codegen tarball goes here so candidates pull
+  instead of install acados locally.
+* **CMake:** root project bumped to **1.1.0**; HW5 wired in behind
+  the same EXISTS guard pattern.
+* **uv workspace:** registers `HW5_mpc_gimbal` as a member.
+
+Out of scope (in `HW5_mpc_gimbal/README.md`): online weight tuning,
+hardware-in-the-loop, CUDA EP. Hidden grading deferred per Stage 10.
+
 ## v1.0-hw4-ballistic — Stage 6 (2026-04-29)
 
 Ballistic + iterative aim-prediction solver. Closes the
