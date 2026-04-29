@@ -1,0 +1,53 @@
+# Build artefacts
+build/
+install/
+log/
+out/
+dist/
+*.o
+*.so
+*.dylib
+*.a
+
+# Python / uv
+.venv/
+__pycache__/
+*.egg-info/
+.uv-cache/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Models / data (carry pointers, not blobs)
+*.pt
+*.onnx
+*.engine
+shared/opponents/*.pt
+shared/opponents/*.bin
+data/raw/
+data/synthetic/
+
+# Godot exports
+shared/godot_arena/.import/
+shared/godot_arena/builds/
+shared/godot_arena/*.x86_64
+shared/godot_arena/*.exe
+shared/godot_arena/*.app
+
+# Docker / CI scratch
+*.log
+.coverage
+htmlcov/
+
+# macOS metadata files (the dot-underscore noise that already plagues this checkout)
+._*
