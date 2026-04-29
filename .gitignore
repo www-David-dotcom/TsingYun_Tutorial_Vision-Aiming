@@ -66,3 +66,8 @@ htmlcov/
 
 # Superpowers brainstorming workspace (visual companion mockups, transient state)
 .superpowers/
+
+# Synty POLYGON paid asset pack — source redistribution forbidden by license.
+# Maintainer fetches manually before building; CI guard in
+# tools/scripts/check_synty_redistribution.py enforces this.
+shared/unity_arena/Assets/Synty/

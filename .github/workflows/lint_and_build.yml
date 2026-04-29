@@ -26,6 +26,8 @@ jobs:
         # which is exactly what we want here. The other tests in
         # tests/test_fetch_assets.py do run.
         run: uv run pytest tests/test_fetch_assets.py -v
+      - name: Check Synty redistribution
+        run: uv run python tools/scripts/check_synty_redistribution.py
 
   cpp-build:
     runs-on: ubuntu-latest
