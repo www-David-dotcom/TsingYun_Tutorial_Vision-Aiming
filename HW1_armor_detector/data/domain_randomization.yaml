@@ -1,0 +1,64 @@
+# Domain randomization knobs for the HW1 dataset dumper.
+#
+# Both the synthetic-PIL backend and the godot-driven backend honour
+# this config; per-sample values are drawn uniformly within the listed
+# ranges using the same SeedRng-style determinism as the arena (one
+# numpy.Generator per dataset, seeded by `--seed`).
+
+image:
+  width: 1280
+  height: 720
+  fps: 60                       # only used by the godot backend
+
+# How many plates to place per synthetic frame. Real-world frames have
+# 1-4 plates visible per robot * 1-2 robots; the upper bound matches.
+plates_per_frame:
+  min: 1
+  max: 4
+
+# Plate appearance — colours/teams, icons, sizes (pixels at 1280x720).
+plate:
+  team_choices: ["blue", "red"]
+  icon_choices: ["Hero", "Engineer", "Standard", "Sentry"]
+  width_px:
+    min: 18
+    max: 110
+  aspect_ratio:
+    min: 0.85
+    max: 1.15
+  yaw_deg:
+    min: -45.0
+    max: 45.0
+  pitch_deg:
+    min: -25.0
+    max: 25.0
+
+# Background. The synthetic backend draws procedural noise + simple
+# rectangles (mimicking arena walls); real holdout frames bypass these
+# entirely.
+background:
+  noise_octaves: 4
+  base_color_jitter: 0.25       # per-channel, [0, 1] uniform on top of grey
+  rect_count:
+    min: 0
+    max: 8
+
+# Augmentation. These are applied AFTER the plate is composited but
+# BEFORE the labels are written, so the bbox stays correct.
+augment:
+  brightness:
+    min: 0.7
+    max: 1.3
+  contrast:
+    min: 0.8
+    max: 1.2
+  hue_shift_deg:
+    min: -10.0
+    max: 10.0
+  motion_blur_kernel:
+    min: 1
+    max: 5                      # odd integers only; size 1 = no-op
+  jpeg_quality:
+    min: 60
+    max: 95
+  mixup_prob: 0.15              # see train.py mixup TODO

@@ -1,0 +1,35 @@
+# Pinhole intrinsics for the gimbal camera in shared/godot_arena/.
+#
+# These match Godot's Camera3D in scenes/gimbal.tscn (FOV=60°,
+# resolution from project.godot). The dataset dumper's `--source godot`
+# backend uses these to re-project oracle target world coords into
+# screen-space bounding boxes.
+#
+# If you change the FOV in gimbal.tscn or the viewport size in
+# project.godot, regenerate this file (the math is in
+# data/dataset_dumper.py:rebuild_intrinsics).
+
+width: 1280
+height: 720
+fov_y_deg: 60.0
+# Computed: fy = (height / 2) / tan(fov_y / 2) = 360 / tan(30°) = 623.538
+fy: 623.538290
+# Square pixels.
+fx: 623.538290
+cx: 640.0
+cy: 360.0
+
+# Plate geometry (matches scenes/armor_plate.tscn — used to size the
+# bbox after the dumper computes the plate centre in pixels).
+plate_world:
+  width_m: 0.14
+  height_m: 0.13
+
+# Visibility heuristic. Stage 3 doesn't raycast — a plate is "visible"
+# if both:
+#   - its centre projects inside [0, width) x [0, height), and
+#   - the dot product of its outward-facing normal with the
+#     camera-to-plate direction is below this threshold (i.e. the plate
+#     is facing the camera, not away from it).
+visibility:
+  facing_dot_max: -0.15
