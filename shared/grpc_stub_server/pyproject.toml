@@ -1,0 +1,23 @@
+[project]
+name = "grpc-stub-server"
+version = "0.5.0"
+description = "Stand-in gRPC server that speaks aiming.proto until the Godot arena lands in stage 2"
+requires-python = ">=3.11"
+
+dependencies = [
+    "grpcio>=1.60",
+    "grpcio-tools>=1.60",
+    "protobuf>=4.25",
+    "click>=8.1",
+    "rich>=13.7",
+]
+
+[project.scripts]
+aiming-stub-server = "grpc_stub_server.__main__:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/grpc_stub_server"]

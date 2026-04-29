@@ -1,0 +1,56 @@
+[project]
+name = "aiming-hw"
+version = "0.5.0"
+description = "TsingYun RoboMaster Vision Group recruitment-cycle assignment template"
+requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+authors = [
+    { name = "TsingYun Vision Group" },
+]
+
+dependencies = [
+    "grpcio>=1.60",
+    "grpcio-tools>=1.60",
+    "protobuf>=4.25",
+    "pyzmq>=25.1",
+    "numpy>=1.26",
+    "pillow>=10.2",
+    "tomli>=2.0; python_version < '3.11'",
+    "oss2>=2.18",
+    "click>=8.1",
+    "rich>=13.7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "minio>=7.2",
+]
+
+[tool.uv.workspace]
+members = [
+    "shared/grpc_stub_server",
+    "shared/zmq_frame_pub",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
+ignore = ["E501"]  # ruff format handles line length already
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "shared/grpc_stub_server/tests", "shared/zmq_frame_pub/tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true  # oss2, grpc stubs aren't always type-complete
