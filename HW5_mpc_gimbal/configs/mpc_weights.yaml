@@ -1,0 +1,47 @@
+# MPC weights and physical constants for the gimbal controller.
+#
+# The candidate tunes these offline via `python src/tune.py` and ships
+# the values they want into the generated solver via
+# `python src/generate_acados.py --weights configs/mpc_weights.yaml`.
+# The runtime C++ side in source/controller.cpp doesn't read this YAML
+# — only the codegen step does.
+
+# Horizon and discretisation.
+horizon:
+  length_steps: 20          # N — number of stages
+  step_seconds: 0.01        # dt — control-loop period (100 Hz)
+
+# Physical parameters of the two-axis gimbal. These match the
+# RoboMaster reference robot to within a factor of two; the candidate
+# can refine via system identification on shared/godot_arena replays.
+physics:
+  inertia_yaw_kgm2:    0.012
+  inertia_pitch_kgm2:  0.008
+  motor_lag_tc_s:      0.04   # first-order torque lag time constant
+  yaw_rate_limit_rps:  12.0
+  pitch_rate_limit_rps: 8.0
+  yaw_torque_limit_nm:  1.6
+  pitch_torque_limit_nm: 1.2
+  pitch_limit_lo_rad: -0.35   # ~-20 deg
+  pitch_limit_hi_rad:  0.52   # ~+30 deg
+
+# Stage cost weights (quadratic). The state error vector is
+#   [yaw_error, pitch_error, yaw_rate, pitch_rate, yaw_torque, pitch_torque].
+# Pick the diagonal — off-diagonals are zero by default.
+weights:
+  state_diag:
+    yaw_error:    400.0
+    pitch_error:  400.0
+    yaw_rate:       1.0
+    pitch_rate:     1.0
+    yaw_torque:     0.0
+    pitch_torque:   0.0
+  control_diag:
+    yaw_torque_cmd:   0.05
+    pitch_torque_cmd: 0.05
+  terminal_scale: 5.0    # multiplier applied to state weights at the final stage
+
+# Tuning starting points for the candidate's offline sweep.
+tuning_grid:
+  state_yaw_error:    [100.0, 200.0, 400.0, 800.0]
+  control_yaw_torque: [0.01, 0.05, 0.10, 0.50]

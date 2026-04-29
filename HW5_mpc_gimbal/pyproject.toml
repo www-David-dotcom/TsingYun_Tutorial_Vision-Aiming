@@ -1,0 +1,37 @@
+[project]
+name = "aiming-hw5-mpc"
+version = "1.1.0"
+description = "HW5 — MPC gimbal controller. CasADi model + acados-template codegen + offline weight tuning."
+requires-python = ">=3.11"
+license = "MIT"
+
+# CasADi for the symbolic model + matplotlib for tune.py plotting.
+# Both live in an opt-in 'hw5' uv group; candidates pull them with
+# `uv sync --group hw5`. The C++ runtime in `source/controller.cpp`
+# only needs the *generated* C library, not acados itself.
+#
+# acados itself is installed manually from
+# https://docs.acados.org/installation/index.html — it isn't on PyPI
+# (the `acados_template` Python module ships with the upstream
+# checkout). The team installs once on the workstation that runs
+# `python src/generate_acados.py`; candidates pull the codegen
+# tarball via `shared/scripts/fetch_assets.py --only acados-solver-hw5-v1.1`
+# and never touch acados directly.
+dependencies = [
+    "numpy>=1.26",
+    "pyyaml>=6.0",
+]
+
+[dependency-groups]
+hw5 = [
+    "casadi>=3.6",
+    "matplotlib>=3.8",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
+ignore = ["E501", "N806"]
