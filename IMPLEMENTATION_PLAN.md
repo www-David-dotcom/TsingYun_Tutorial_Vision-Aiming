@@ -1,6 +1,18 @@
 # Aiming_HW — Per-Stage Implementation Plan
 
+> Plan version 0.2 — the four open questions from v0.1 are resolved (see "Resolved decisions" below).
 > Companion to [`schema.md`](schema.md) v0.2. Stops at the level of "what files land in each commit, and how do I know the stage is done." Once approved, each stage is implemented on a short-lived branch, reviewed, fast-forward-merged into `main`, and tagged.
+
+---
+
+## Resolved decisions (rolled in from v0.1's open questions)
+
+1. **`godot_rl_agents`** is **vendored** at a pinned commit under `shared/godot_arena/addons/godot_rl_agents/`. We do not fork unless and until we need a patch upstream won't accept.
+2. **Model blobs live on a private OSS bucket** (`tsingyun-aiming-hw-models`). The repo carries SHA-256 pointers in `shared/assets/manifest.toml` and a small `shared/scripts/fetch_assets.py` that pulls the blobs into `out/assets/` on demand. We are deliberately **not** using Git LFS — OSS gives us cheaper bandwidth, KMS encryption for opponent policies, and a single asset story that already covers Godot binaries and the HW1 starter dataset.
+3. **Grading runs on the team's local GPU box, manually.** No GitHub Actions self-hosted runner, no ARC, no rented cloud GPU. The grader is a CLI a team member invokes against a clean throwaway worktree of the candidate's fork; the leaderboard is a generated CSV/HTML, not a live service. **The grader and leaderboard exist for grading, not for "running"** — there is no daemon, no autoscaler, no web app to keep alive.
+4. **All scheduled work is pinned to `Asia/Shanghai`.** If we ever add a launchd/systemd timer for the leaderboard refresh, it sets `TZ=Asia/Shanghai`; cron expressions in repo are documented as Shanghai-local.
+
+These decisions reshape Stage 10 substantially (see §Stage 10 below) and trim the OSS bucket plan to one (or two with cache) buckets.
 
 ---
 
@@ -9,7 +21,7 @@
 ### Branching
 * Trunk: `main`. Always shippable; tagged at the end of every stage.
 * Feature branches: `stageN/<slug>` (e.g. `stage3/hw1-detector`). One PR per branch.
-* Never commit binaries, model weights, or generated code; they live behind `.gitignore` and are pulled by `uv sync` / `cmake --build` / a future Git LFS pointer file.
+* **No binaries in git.** Model weights, datasets, Godot exports, and replays all live on OSS (per resolved decision 2). The repo carries `shared/assets/manifest.toml` with `{path, sha256, bucket, key, size}` rows and a `fetch_assets.py` resolver. Build artefacts and caches remain `.gitignore`-d and are produced by `uv sync` / `cmake --build`.
 
 ### Commits
 * Conventional Commits: `feat(<scope>): ...`, `fix:`, `docs:`, `test:`, `chore:`, `refactor:`, `build:`, `ci:`.
@@ -46,7 +58,8 @@ LOC ranges are guidance for sizing review effort, not hard caps. Tests count tow
 2. Define the gRPC/Protobuf contract (`shared/proto/aiming.proto`).
 3. Establish reproducible Python (`uv`) and C++ (`cmake` + vcpkg) build pipelines.
 4. Ship a runnable gRPC echo + ZMQ frame stream so HW1 onward have a stable simulator-side stub to point at while the real Godot scene is being built in parallel.
-5. Publish v0.1 of the grader Docker image to `ghcr.io/tsingyun-rm/aiming-hw-grader:0.1`.
+5. Build the grader Docker image locally and tag it `aiming-hw-grader:0.1`. The image exists for reproducible local grading on the team box (per resolved decision 3); it does **not** need to be pushed to a public registry, though we may push it to the OSS cache bucket as backup.
+6. Provision the OSS buckets (`tsingyun-aiming-hw-public`, `tsingyun-aiming-hw-models`, optional `…-cache`), set bucket ACLs / KMS / lifecycle rules, and ship `shared/scripts/fetch_assets.py` plus `shared/assets/manifest.toml` so every later stage can declare its asset deps without reinventing the fetcher.
 
 ### Files to create
 ```
@@ -57,7 +70,8 @@ Aiming_HW/
 ├── README.md                            # candidate-facing entry doc (skeleton only)
 ├── docs/
 │   ├── CHANGELOG.md
-│   └── architecture.md                  # rendered from schema §3 with figures
+│   ├── architecture.md                  # rendered from schema §3 with figures
+│   └── oss_assets.md                    # where blobs live, how fetch_assets.py works, OSS endpoint config
 ├── shared/
 │   ├── cmake/
 │   │   ├── UvFetch.cmake
@@ -67,17 +81,23 @@ Aiming_HW/
 │   │   ├── aiming.proto                 # EnvReset / EnvStep / EnvPushFire / Episode RPCs
 │   │   ├── sensor.proto                 # SensorBundle, IMU, GimbalState, FrameRef
 │   │   └── score.proto                  # ScoreBundle, EpisodeStats
+│   ├── assets/
+│   │   └── manifest.toml                # rows: name, oss bucket+key, sha256, size, visibility
+│   ├── scripts/
+│   │   ├── fetch_assets.py              # resolves manifest entries, downloads to out/assets/
+│   │   └── push_assets.py               # team-only; uploads new blobs and rewrites manifest
 │   ├── grpc_stub_server/                # Python-only echo server, used in lieu of Godot until Stage 2
 │   │   ├── pyproject.toml
 │   │   └── src/grpc_stub_server/__init__.py
 │   ├── zmq_frame_pub/                   # writes a synthetic 720p RGB feed at 60 fps
 │   │   └── src/zmq_frame_pub/main.py
 │   └── docker/
-│       ├── grader.Dockerfile
+│       ├── grader.Dockerfile            # built locally on the team box; not pushed to ghcr
 │       ├── grader.compose.yaml
 │       └── README.md
 ├── tests/
-│   └── proto_roundtrip_test.cpp         # serialize/deserialize sanity for every message
+│   ├── proto_roundtrip_test.cpp         # serialize/deserialize sanity for every message
+│   └── test_fetch_assets.py             # offline fetch test using a local OSS-emulator (minio)
 └── .clang-format                        # copied from RM_Vision_Aiming
 ```
 
@@ -97,7 +117,9 @@ Expected: stub server logs `EnvStep` calls; ZMQ subscriber prints frame numbers 
 ### Acceptance criteria
 * `aiming.proto` round-trips: every message can be encoded and decoded in both Python and C++.
 * `cmake --preset linux-debug && cmake --build --preset linux-debug` succeeds.
-* `docker pull ghcr.io/tsingyun-rm/aiming-hw-grader:0.1` works (image published via CI).
+* `docker build -t aiming-hw-grader:0.1 -f shared/docker/grader.Dockerfile .` succeeds on the team box; image is reproducible (digest pinned in `docs/CHANGELOG.md`).
+* `uv run python shared/scripts/fetch_assets.py --dry-run` parses `manifest.toml` and reports per-asset bucket+sha256+size with no errors. With OSS credentials present, `uv run python shared/scripts/fetch_assets.py --only sentinel` downloads a 1 KB sentinel object and verifies its sha256.
+* `pytest tests/test_fetch_assets.py` passes against a local minio container (no real OSS creds needed in CI/dev).
 * `clang-format --dry-run` and `ruff check` both clean.
 
 ### Risks
@@ -208,7 +230,7 @@ HW1_armor_detector/
 ├── data/
 │   ├── dataset_dumper.py                # drives Godot in label-dump mode
 │   ├── domain_randomization.yaml
-│   └── real_holdout/                    # 100 real RoboMaster frames + labels (LFS)
+│   └── real_holdout/                    # 100 real RoboMaster frames + labels (fetched from OSS public bucket on demand)
 ├── src/
 │   ├── train.py                         # TODO holes: loss_box / loss_kpt / loss_cls / mixup
 │   ├── model.py                         # MobileNetV3-Small backbone (filled), head (filled)
@@ -641,57 +663,61 @@ Multi-agent communication beyond the simple ally-NPC channel; full game-theoreti
 
 ---
 
-## Stage 10 — Grader, leaderboard, pilot, launch (M5–M6)
+## Stage 10 — Local grader, leaderboard, pilot, launch (M5–M6)
 
-This stage is split into two sub-stages because the launch waits on the pilot.
+This stage is split into two sub-stages because the launch waits on the pilot. Per resolved decision 3, **everything in Stage 10a is a CLI invoked manually on the team's local GPU box** — no GitHub Actions self-hosted runner, no autograding workflows, no daemonized leaderboard service. The leaderboard is a generated static artifact (CSV + HTML) consumed by the recruiting team.
 
-### Stage 10a — Grader & leaderboard
+### Stage 10a — Local grader & leaderboard CLI
 
 * **Branch**: `stage10/grader`
 * **End tag**: `v1.2-grader`
-* **Calendar estimate**: 5–6 working days
+* **Calendar estimate**: 3–4 working days (down from 5–6 in v0.1; the GH Actions stack is gone)
 
 #### Goals
-1. Author the GitHub Actions workflows that run on every push to candidate forks (one workflow per HW + one aggregator).
-2. Set up the self-hosted GPU runner (`label: self-hosted, gpu, aiming-hw`) with the grader Docker image.
-3. Implement the score aggregator that reads per-HW JSON outputs and writes `leaderboard.csv`.
-4. Implement the internal leaderboard page (Streamlit-export or Jinja static site) and the GitHub Pages deploy step.
-5. Apply anti-cheat hardening: workflow-tampering detection, rate limiting, network-isolated grader container.
+1. Implement the grader CLI: `python grader/run.py --candidate {gh_handle} --hw {n} --seeds {...}`. It clones a candidate fork into a clean throwaway worktree under `out/work/{handle}/`, builds inside the local `aiming-hw-grader:0.1` Docker image, runs the per-HW grading episodes, and writes `out/scores/{handle}/{hw}/{run_id}.json`.
+2. Implement `python grader/aggregate.py` — walks `out/scores/`, dedupes to the latest commit per (candidate, HW), produces `out/leaderboard.csv` and `out/leaderboard.json`.
+3. Implement `python grader/render_leaderboard.py` — Jinja-renders `out/leaderboard.html` from the JSON; the HTML is a single self-contained file the team can open in a browser or attach to an email. No web server, no SSO, no Pages deploy.
+4. Add a `Makefile` with the canonical commands: `make grade CANDIDATE=alice HW=3`, `make grade-all`, `make leaderboard`, `make watch-prs`. `watch-prs` polls the org via `gh pr list --json` every 10 minutes for new commits and offers to grade them; pure CLI prompt, no daemon.
+5. Bilingual handbook for candidates (`docs/candidate_handbook.md`) and an internal guide for graders (`docs/grader_internal.md`).
+6. **No anti-cheat scheduling logic is needed.** Because the grader runs from a clean clone on the team box, candidates have no execution surface to attack. The grader pulls the candidate's repo by commit SHA, never by branch name; we explicitly ignore `.github/workflows/*` in the candidate's submission.
 
 #### Files to create
 ```
 grader/
-├── workflows/
-│   ├── hw1_autograde.yml
-│   ├── hw2_autograde.yml
-│   ├── hw3_autograde.yml
-│   ├── hw4_autograde.yml
-│   ├── hw5_autograde.yml
-│   ├── hw6_autograde.yml
-│   ├── hw7_autograde.yml
-│   ├── aggregate_nightly.yml
-│   └── publish_leaderboard.yml
-├── score_aggregator.py
-├── leaderboard_site/
-│   ├── app.py                           # Streamlit
-│   ├── requirements.txt
-│   └── templates/
-└── runner_setup.md                      # how to register a self-hosted runner
+├── run.py                               # CLI entry point — clone, build, episodes, JSON
+├── aggregate.py                         # scores/*.json → leaderboard.csv
+├── render_leaderboard.py                # leaderboard.csv → leaderboard.html (Jinja, no server)
+├── watch_prs.py                         # `gh pr list` poll loop, manual approval prompt
+├── Makefile                             # `make grade`, `make leaderboard`, etc.
+├── templates/
+│   └── leaderboard.html.j2
+└── private/                             # NOT shipped to candidates; lives in this repo only
+    ├── seeds.txt
+    ├── reference_impls/                 # used by hidden tests, not shown to candidate
+    └── opponents/                       # populated by fetch_assets.py from the models OSS bucket at grade time
 docs/
-├── candidate_handbook.md                # consolidated bilingual doc for applicants
-└── grader_internal.md                   # for the recruiting team
+├── candidate_handbook.md                # bilingual; per-HW reading order, install steps, how to read your score
+└── grader_internal.md                   # for the recruiting team: how to run grader/run.py end-to-end
 ```
 
 #### LOC budget
-~ 1500 LOC (workflows: 600, Python: 600, docs: 300).
+~ 700 LOC (down from 1500 in v0.1; ~Python: 500, templates + docs: 200).
 
 #### Smoke check
-* On a sandbox repo: push a known-good HW1 solution; the workflow runs to completion, score JSON appears as a PR comment, leaderboard CSV updates.
+```bash
+# from the team box, with a known-good HW1 solution sitting in `out/seeds/alice-hw1`:
+make grade CANDIDATE=alice HW=1
+make leaderboard
+open out/leaderboard.html
+```
+Expected: a JSON score lands under `out/scores/alice/1/`, the CSV gains a row, the HTML opens to a one-row leaderboard with alice's name and score.
 
 #### Acceptance criteria
-* Per-HW workflow runs in ≤ 10 min wall-clock on the runner.
-* Tampering with `.github/workflows/*.yml` blocks the submission as flagged in the LUMS scaling autograding case study.
-* Network-isolated container verified by `nc -zv 8.8.8.8 53` failing inside the grader.
+* `grader/run.py` is idempotent: re-running on the same commit SHA produces an identical score JSON (modulo a `run_id` timestamp).
+* End-to-end grade-one-HW wall-clock ≤ 10 minutes on the team GPU box.
+* `make leaderboard` finishes in < 5 seconds for 50 candidates × 7 HWs.
+* `docs/grader_internal.md` walks a new TA through grading their first submission in < 15 minutes.
+* No daemonized process, no open port, no shared state outside `out/`.
 
 ### Stage 10b — Pilot & launch
 
@@ -742,11 +768,33 @@ Total: 14 weeks nominal, 17 weeks if Stage 7b (Unity port) triggers.
 
 ---
 
-## Open questions before we cut Stage 1
+## OSS bucket plan (rolled in from the bucket-sizing discussion)
 
-1. **Vendor or fork `godot_rl_agents`?** Vendoring at a pinned commit is simpler; forking lets us patch the FPS example without upstream churn. Recommend vendor at pinned commit, fork only if we need patches.
-2. **Where do model blobs live?** Options: (a) Git LFS on the same repo; (b) private S3/OSS bucket with SHA-256 pointers; (c) a sibling `aiming-hw-assets` repo with releases. Recommend (b) to keep the candidate-facing repo small.
-3. **Self-hosted runner host.** Team-owned workstation or a rented GPU box (Lambda, RunPod)? If on-prem, we need a stable LAN IP and a person on-call for runner outages near the deadline.
-4. **Timezone for nightly aggregator.** The aggregator wakes at minute 17 of every hour by default to dodge the API rush; the daily public refresh fires at 03:17 UTC. Confirm UTC is acceptable, or pin to Asia/Shanghai.
+Per resolved decisions 2 and 3, the original 5-bucket layout collapses to **two required + one optional**:
+
+| Bucket | Status | Contents | ACL | Lifecycle | Versioning | Encryption |
+|---|---|---|---|---|---|---|
+| `tsingyun-aiming-hw-public` | **required** | Godot binaries × 3 OSes; HW1 starter dataset (~1.8 GB); HW2/3/4 fixtures > 100 MB; candidate-facing docs PDFs | `public-read` (write: team only) | none; CDN-fronted; cross-region replication if international candidates | on | OSS-managed |
+| `tsingyun-aiming-hw-models` | **required** | bronze/silver/gold opponent `.pt` + checkpoints; reference detector `.onnx` (grader-only); replay bag fixtures > 50 MB; any blob the team would otherwise have committed binary-naked into the repo | `private`; only `aiming-hw-grader` and `aiming-hw-team` RAM roles can read | none; abort old object versions > 90 d | **on** (rollback path for a bad gold policy) | **KMS** (cheap, prevents accidental policy leakage) |
+| `tsingyun-aiming-hw-cache` | **optional** | grader Docker image mirror (CN pull speed), vcpkg/uv caches, prebuilt acados artefacts | `private` | delete > 90 d | off | OSS-managed |
+
+Total expected bucket footprint: ~5–6 GB stored, ~250 GB lifetime egress (50 candidates × 5 GB initial pull). Drop `cache` if the team is happy pulling Docker images from `ghcr.io` directly. The other two buckets from the original 5-bucket plan (`submissions`, `replays`) are gone because they live in the local `out/` directory on the team box and never leave it (per resolved decision 3).
+
+### Why OSS instead of Git LFS for the model blobs
+* GitHub's free LFS bandwidth quota is 1 GB/month — at 50 candidates × ~580 MB initial pull we'd hit a $25/month bandwidth-pack bill within the first day of launch.
+* Aliyun OSS lets us KMS-encrypt the opponent policies, which is a meaningful precaution: the gold policy is the entire point of HW7 and we don't want someone snapshotting it from `git clone` traffic.
+* The same `fetch_assets.py` resolver covers Godot binaries, datasets, and policies — one asset story, not two.
+* If LFS bandwidth ever stops mattering (smaller candidate cohort, cheaper account tier), we can flip a single config switch in `manifest.toml` to push `vis = "lfs"` instead of `vis = "oss-private"`.
+
+---
+
+## Resolved open questions
+
+(Originally posted in v0.1; answers from the team are now folded into the relevant sections above.)
+
+1. **Vendor or fork `godot_rl_agents`?** → **Vendor** at a pinned commit. Fork later only if upstream rejects a patch we need.
+2. **Where do model blobs live?** → **Private OSS bucket** (`tsingyun-aiming-hw-models`), KMS-encrypted, fetched by `shared/scripts/fetch_assets.py` against `shared/assets/manifest.toml`. Git LFS was considered and dropped (bandwidth pricing + no encryption story).
+3. **Self-hosted runner host.** → **Local GPU on the team box, manual.** No GH Actions self-hosted runner, no rented cloud GPU.
+4. **Timezone for nightly aggregator.** → **`Asia/Shanghai`** for any scheduled work. The aggregator is now manual (`make leaderboard`), but if a launchd/systemd timer is added later it sets `TZ=Asia/Shanghai` and the cron expression is documented as Shanghai-local.
 
 — end of plan —
