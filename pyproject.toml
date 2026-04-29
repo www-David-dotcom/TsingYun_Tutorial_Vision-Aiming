@@ -37,6 +37,7 @@ members = [
     "shared/grpc_stub_server",
     "shared/zmq_frame_pub",
     "HW1_armor_detector",
+    "HW3_ekf_tracker",
 ]
 
 [tool.ruff]

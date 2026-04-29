@@ -95,5 +95,21 @@ visibility  = "private"
 local_path  = "out/assets/policies/bronze.pt"
 description = "Frozen bronze-tier opponent policy. Drives the red chassis so HW1 candidates can run a 90s match without a real adversary. Train + push via shared/scripts/push_assets.py once stage3's RL side ships; placeholder digest until then."
 
+# --- Stage 5 (v0.9-hw3-ekf) ---
+# The silver opponent policy. Trains in parallel with Stage 5's
+# tracker work; required by HW3's "5 deathmatch episodes without
+# crashing" acceptance once the team ships it. Placeholder digest
+# until the RL side closes.
+
+[[asset]]
+name        = "silver-opponent-policy"
+bucket      = "tsingyun-aiming-hw-models"
+key         = "assets/policies/silver/0.9.0/policy.pt"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "private"
+local_path  = "out/assets/policies/silver.pt"
+description = "Frozen silver-tier opponent policy. One step harder than bronze — adds dodge + counter-fire behaviours so HW3's tracker has a moving target with non-trivial maneuver patterns. Placeholder digest."
+
 # Add new entries below as later stages need them. Sort by name within each
 # visibility class to keep diffs reviewable.

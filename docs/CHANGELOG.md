@@ -4,6 +4,58 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v0.9-hw3-ekf — Stage 5 (2026-04-29)
+
+The state estimator that consumes HW1's detections and feeds HW4 +
+HW6. EKF + two-mode IMM (CV + CT) + Hungarian-based multi-target
+data association. ~1700 LOC across C++ + Python reference + tests +
+fixtures.
+
+* **HW3 directory:** `HW3_ekf_tracker/` — bilingual README, CMakeLists
+  with Eigen3 skip-guard, opt-in `hw3` uv group for the Python
+  reference's scipy dep.
+* **Python reference + fixtures:**
+  `reference/ekf_python.py` is the math spec — full EKF predict +
+  Joseph update, two-mode IMM mixing/blending, mahalanobis_cost +
+  Hungarian (delegated to scipy).
+  `reference/generate_fixtures.py` produces three deterministic
+  1800-sample CSV trajectories (low / med / high maneuver, 60 Hz
+  for 30 s each) under `tests/fixtures/`. Same `--seed` →
+  byte-identical CSV output.
+* **C++ filled:** `motion_models.{hpp,cpp}` (CV/CT transitions,
+  process noise covariances), `tracker.{hpp,cpp}` (per-target IMM
+  ownership, coast/spawn lifecycle, gated cost-matrix construction),
+  `gaussian_likelihood` in `kalman_step.cpp`.
+* **Four C++ TODO sites** for the candidate:
+  * `kalman_step.cpp::predict` — F·x; F·P·Fᵀ + Q.
+  * `kalman_step.cpp::update`  — Joseph-form posterior. Naive form
+    drifts to non-symmetric P after ~600 steps.
+  * `imm.cpp::Imm::step`       — three labelled blocks: mixing,
+    mode-probability update, combination.
+  * `data_association.cpp`     — `mahalanobis_cost` +
+    `hungarian_assign` (Munkres from scratch — no third-party LAP
+    library on the dep list).
+* **Public tests:** three GTest binaries — `hw3_cv_predict_test`
+  (analytic CV step + covariance growth + Joseph symmetry over 100
+  steps), `hw3_imm_mode_probabilities_test` (sums to 1, straight
+  line favours CV, ω=4 rad/s curve favours CT), `hw3_da_simple_test`
+  (1×1, 2×2 off-diagonal optimum, χ²-gate filter). Each detects the
+  unfilled-TODO state via a sentinel call and `GTEST_SKIP`s
+  cleanly.
+* **Math reference:** `docs/ekf_derivation.md` — predict/update
+  equations, IMM mixing/blending, why Joseph form, Hungarian + gating,
+  performance signals.
+* **Manifest:** `silver-opponent-policy` row (private bucket,
+  placeholder digest until RL side ships).
+* **CMake:** root project bumped to 0.9.0; HW3 wired in behind the
+  same EXISTS guard pattern as HW1/HW2.
+* **uv workspace:** registers `HW3_ekf_tracker` as a member.
+
+Out of scope (and explicit in `HW3_ekf_tracker/README.md`):
+UKF / particle filter / GP-UKF, nonlinear measurement models,
+JPDA / MHT data association. Hidden grading (NEES coverage, RMSE
+bars) deferred per `IMPLEMENTATION_PLAN.md` Stage 10.
+
 ## v0.8-hw2-tf — Stage 4 (2026-04-29)
 
 Smaller assignment — the TF (transform) graph that HW6's runner uses
