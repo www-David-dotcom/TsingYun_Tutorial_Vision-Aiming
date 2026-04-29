@@ -1,0 +1,28 @@
+# Local-dev compose: mount the repo into the toolchain image and drop into a
+# shell. Used by candidates who want to develop inside the image rather than
+# wrangling Eigen / Protobuf / gRPC on their host.
+#
+#     docker compose -f shared/docker/toolchain.compose.yaml run --rm dev
+#
+# In dev, builds land in /workspace/build (= ./build on the host); CMake's
+# generator and toolchain stay consistent across team and candidate.
+
+services:
+  dev:
+    image: tsingyun-aiming-hw-cache.oss-cn-beijing.aliyuncs.com/docker/toolchain/0.5.0:latest
+    build:
+      context: ../..
+      dockerfile: shared/docker/toolchain.Dockerfile
+    volumes:
+      - ../..:/workspace:cached
+      - uv-cache:/root/.cache/uv
+    working_dir: /workspace
+    environment:
+      - CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE:-RelWithDebInfo}
+      - OSS_ACCESS_KEY_ID=${OSS_ACCESS_KEY_ID:-}
+      - OSS_ACCESS_KEY_SECRET=${OSS_ACCESS_KEY_SECRET:-}
+    stdin_open: true
+    tty: true
+
+volumes:
+  uv-cache:
