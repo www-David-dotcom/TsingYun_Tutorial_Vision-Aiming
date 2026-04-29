@@ -36,6 +36,7 @@ dev = [
 members = [
     "shared/grpc_stub_server",
     "shared/zmq_frame_pub",
+    "HW1_armor_detector",
 ]
 
 [tool.ruff]
@@ -47,7 +48,12 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "RUF"]
 ignore = ["E501"]  # ruff format handles line length already
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "shared/grpc_stub_server/tests", "shared/zmq_frame_pub/tests"]
+testpaths = [
+    "tests",
+    "shared/grpc_stub_server/tests",
+    "shared/zmq_frame_pub/tests",
+    "HW1_armor_detector/tests/public",
+]
 asyncio_mode = "auto"
 
 [tool.mypy]

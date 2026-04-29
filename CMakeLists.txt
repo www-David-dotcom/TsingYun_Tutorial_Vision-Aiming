@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(aiming_hw
-    VERSION 0.5.0
+    VERSION 0.7.0
     DESCRIPTION "TsingYun RoboMaster Vision Group recruitment-cycle assignment template"
     LANGUAGES CXX)
 
@@ -53,11 +53,17 @@ endif()
 
 # --- subdirs ------------------------------------------------------------------
 
-# Stages 2+ will populate HW1..HW7 / shared/godot_arena. For stage 1 we
-# only have the proto codegen target above and the test directory.
+# Stages 2+ progressively populate HW1..HW7 / shared/godot_arena. Each
+# per-HW CMakeLists is responsible for guarding its own optional deps
+# (e.g. HW1 skips itself when ONNX Runtime isn't installed) so a
+# partial environment still produces a green build.
 
 enable_testing()
 add_subdirectory(tests)
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HW1_armor_detector/CMakeLists.txt")
+    add_subdirectory(HW1_armor_detector)
+endif()
 
 # --- summary ------------------------------------------------------------------
 
