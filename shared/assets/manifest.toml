@@ -69,5 +69,31 @@ visibility  = "anonymous"
 local_path  = "out/assets/godot/aiming_arena_win64.exe"
 description = "Standalone Windows x86_64 executable. Placeholder digest."
 
+# --- Stage 3 (v0.7-hw1-detector) ---
+# HW1 candidate-facing data + the bronze opponent policy. The
+# real-holdout zip is anonymous-public (real RoboMaster frames the
+# team has labeled); the bronze .pt lives in the private models
+# bucket because the policy weights ARE the assignment for HW7.
+
+[[asset]]
+name        = "real-holdout-frames-v1"
+bucket      = "tsingyun-aiming-hw-public"
+key         = "assets/HW1/real_holdout_v1.zip"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "anonymous"
+local_path  = "out/assets/HW1/real_holdout_v1.zip"
+description = "100 real-world RoboMaster frames + per-plate labels for the HW1 sim-to-real holdout. Placeholder digest until the team labels and uploads; HW1 README points candidates here for offline holdout evaluation."
+
+[[asset]]
+name        = "bronze-opponent-policy"
+bucket      = "tsingyun-aiming-hw-models"
+key         = "assets/policies/bronze/0.7.0/policy.pt"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "private"
+local_path  = "out/assets/policies/bronze.pt"
+description = "Frozen bronze-tier opponent policy. Drives the red chassis so HW1 candidates can run a 90s match without a real adversary. Train + push via shared/scripts/push_assets.py once stage3's RL side ships; placeholder digest until then."
+
 # Add new entries below as later stages need them. Sort by name within each
 # visibility class to keep diffs reviewable.

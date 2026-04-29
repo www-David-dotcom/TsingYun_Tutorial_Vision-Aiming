@@ -4,6 +4,62 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v0.7-hw1-detector — Stage 3 (2026-04-29)
+
+First candidate-facing assignment. HW1 is the lightweight armor +
+icon detector — train a small CNN on synthetic frames, export to
+ONNX, run inference from C++ via ONNX Runtime.
+
+* **HW1 directory:** `HW1_armor_detector/` — bilingual README
+  (Chinese primary, English summary), per-HW pyproject with torch in
+  an opt-in dependency group (`uv sync --group hw1`), CMakeLists that
+  skips itself cleanly when ONNX Runtime isn't installed, and a
+  `proto -> ../shared/proto` symlink so the runner pulls the
+  cross-stage protos.
+* **dataset:** `data/dataset_dumper.py` ships two backends. The
+  synthetic backend (PIL only) draws procedural plates on noisy
+  backgrounds for offline iteration; the godot backend connects to
+  the Stage-2 arena over TCP, reads oracle target poses each tick,
+  and re-projects them via the camera intrinsics in
+  `data/camera_intrinsics.yaml`. Domain-randomization knobs in
+  `data/domain_randomization.yaml`.
+* **training:** `src/model.py` is MobileNetV3-Small at stride 16
+  with a four-headed multi-task head (4 box + 8 kpt + 4 cls + 1 obj).
+  `src/losses.py` carries the primitives candidates compose
+  (`giou_loss`, `focal_loss`, `keypoint_l1`, `softmax_focal_loss`,
+  `assign_targets`); `src/train.py` exposes four `# TODO(HW1):`
+  sites — `loss_box`, `loss_kpt`, `loss_cls`, `mixup`.
+  `src/export_onnx.py` is fully filled (no TODOs) and validates the
+  graph through `onnx.checker.check_model`.
+* **C++ inferer:** `include/aiming_hw/detector/{post_process,inferer}.hpp`
+  + matching sources. Session set-up, IO binding, and the
+  uint8-BGR-to-float-RGB normalisation are filled; the candidate
+  writes `decode_head` and `non_max_suppression` (post-NMS class-aware
+  dedup). A `hw1_inferer_smoke` CLI loads either raw RGB888 or PPM
+  P6 and prints detections.
+* **public tests:** `tests/public/test_loss_shapes.py` (loss-call
+  smoke + xfail wrap when TODOs aren't filled),
+  `tests/public/test_export_roundtrip.py` (ONNX export + checker),
+  `tests/public/test_post_process.cpp` (GoogleTest, NMS dedup +
+  cross-class-stack edge cases). Each test self-skips when its heavy
+  dependency (torch, onnxruntime) is missing.
+* **manifest:** two new placeholder rows — `real-holdout-frames-v1`
+  (anonymous-public, the labeled real-world holdout) and
+  `bronze-opponent-policy` (private, the frozen RL bot for the red
+  chassis). Both with zero digests until the team uploads.
+* **CMake:** root project bumped to 0.7.0; HW1 subdir added with a
+  guard so candidates without ONNX Runtime still get a green
+  configure pass.
+* **uv workspace:** registers `HW1_armor_detector` as a member so
+  `uv sync` resolves its tree alongside the existing stub servers.
+
+Out of scope for v0.7 (and explicit in `HW1_armor_detector/README.md`):
+TensorRT engines, distillation/quantization, the CUDA EP, hidden
+grading episodes (deferred per `IMPLEMENTATION_PLAN.md` Stage 10),
+and the actual bronze-policy training run (Stage 3's RL side ships
+later — the manifest placeholder unblocks the wiring without blocking
+on the model).
+
 ## v0.6-arena-poc — Stage 2 (2026-04-29)
 
 First runnable simulator. Stand up `shared/godot_arena/` as a Godot 4
