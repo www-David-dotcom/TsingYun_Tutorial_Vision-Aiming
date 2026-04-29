@@ -1,7 +1,7 @@
 # Aiming_HW — Per-Stage Implementation Plan
 
-> Plan version 0.3 — adds the second wave of decisions (OSS region, repo path, candidate-side grading, models-bucket AccessKey, GH hosted runners for non-grading).
-> Companion to [`schema.md`](schema.md) v0.2. Stops at the level of "what files land in each commit, and how do I know the stage is done." Once approved, each stage is implemented on a short-lived branch, reviewed, fast-forward-merged into `main`, and tagged.
+> Plan version 0.4 — schema bumped to v0.4 (grading deferred); decisions tagged with **\[grading]** below are now considered open and will be revisited when `schema.md` §7 is designed.
+> Companion to [`schema.md`](schema.md) v0.4. Stops at the level of "what files land in each commit, and how do I know the stage is done." Once approved, each stage is implemented on a short-lived branch, reviewed, fast-forward-merged into `main`, and tagged.
 
 ---
 
@@ -11,11 +11,11 @@
 
 1. **`godot_rl_agents`** is **vendored** at a pinned commit under `shared/godot_arena/addons/godot_rl_agents/`. We do not fork unless and until we need a patch upstream won't accept.
 2. **Asset blobs live on Aliyun OSS in `cn-beijing`** (华北 2 / Beijing). Three buckets exist: `tsingyun-aiming-hw-public` (anonymous-read, candidate-facing static assets), `tsingyun-aiming-hw-models` (private, SSE-OSS, holds opponent policies + reference detector ONNX), `tsingyun-aiming-hw-cache` (private, build/image cache). The repo carries SHA-256 pointers in `shared/assets/manifest.toml` and a `shared/scripts/fetch_assets.py` resolver. We are deliberately **not** using Git LFS (bandwidth pricing, no encryption story).
-3. **Grading runs on the candidate's own machine.** No team GPU box, no rented cloud GPU, no GitHub Actions self-hosted runner. The grader CLI ships *with* the candidate-facing assignment as `tools/grader/`; candidates run `make grade HW=N` locally on their CPU/GPU, the grader writes a `submissions/hw{N}/score.json`, the candidate commits + pushes; the team aggregates submitted JSONs into the leaderboard.
-4. **The candidate-facing repo is [`www-David-dotcom/TsingYun_Tutorial_Vision-Aiming`](https://github.com/www-David-dotcom/TsingYun_Tutorial_Vision-Aiming).** Candidates fork it, work in their fork, and open a PR back to it for submission (matching the existing repo's `README.md` workflow). Stage 1+ work lands in this repo's `main` branch.
-5. **`tsingyun-aiming-hw-models` access** uses a **shared read-only AccessKey** committed at `shared/oss/reader_credentials.json` in the candidate-facing repo. A RAM user `aiming-hw-public-reader` has GetObject-only on the models bucket; the AccessKey can be rotated by the team without code changes (only the JSON file updates). This is functionally equivalent to public-read but adds a rotatable choke point and per-key audit trails.
-6. **Anti-cheat posture: honor system + commit binding.** Score JSONs include the candidate's commit SHA, build artifact SHA-256, and seed-manifest hash; nothing is cryptographically signed. Trust is bounded because the candidate pool is ~50 people applying for a job. The team can re-run a candidate's grader on any TA's laptop for spot-check verification — this is *not* a "team GPU box," it's a fallback any laptop satisfies.
-7. **GitHub-hosted runners are allowed for non-grading work only.** `ubuntu-latest` workflows handle: submission JSON validation on PR, leaderboard regeneration on schedule, lint, build smoke. Grading episodes (with their physics simulator and frozen RL bots) never run on hosted runners — they only run on the candidate's machine.
+3. **\[grading — deferred]** Grading topology was previously set to "candidate's own machine"; that decision is now reopened pending `schema.md` §7. Stages 1–9 do not depend on it.
+4. **The candidate-facing repo is [`www-David-dotcom/TsingYun_Tutorial_Vision-Aiming`](https://github.com/www-David-dotcom/TsingYun_Tutorial_Vision-Aiming).** Candidates fork it, work in their fork, and open a PR back to it for submission. Stage 1+ work lands in this repo's `main` branch.
+5. **\[grading — deferred]** Models-bucket access pattern (shared AccessKey vs RAM role vs presigned URL) was tied to the previous grading decision; reopened pending §7. For Stages 1–9 the team accesses `tsingyun-aiming-hw-models` directly via team RAM credentials.
+6. **\[grading — deferred]** Anti-cheat posture is now part of §7's redesign.
+7. **\[grading — deferred]** GH-hosted runner usage scope is part of §7's redesign. (We can still use `ubuntu-latest` for lint and build smoke during Stages 1–9; that's not grading.)
 8. **All scheduled work is pinned to `Asia/Shanghai`.** Cron expressions in workflow YAML are documented as Beijing-local; the leaderboard regen wakes at minute 17 of the hour by convention.
 
 These decisions reshape Stage 10 (now centered on submit-and-aggregate, not run-and-aggregate) and require Stage 1 to provision the read-only AccessKey + manifest format up front.
@@ -673,7 +673,13 @@ Multi-agent communication beyond the simple ally-NPC channel; full game-theoreti
 
 ---
 
-## Stage 10 — Submission flow, leaderboard, pilot, launch (M5–M6)
+## Stage 10 — Grading workflow & launch *(design deferred)*
+
+> **Per the v0.4 schema decision to defer grading**, this entire stage is a sketch awaiting redesign. The body below is the v0.3 draft (candidate-side grader, GH-hosted aggregator) preserved for context — it should be **treated as superseded**, not as a commitment. Once HW1–HW7 scaffolds (Stages 1–9) are landed, we'll write `design: grading workflow v1` against `schema.md` §7, then rewrite this stage to match. Until then, treat Stages 1–9 as the active scope.
+
+---
+
+### (Superseded v0.3 sketch follows)
 
 This stage is split into two sub-stages because the launch waits on the pilot. Per resolved decisions 3, 6, and 7: **the grader CLI lives in the candidate-facing repo and runs on the candidate's machine** (it was actually scaffolded incrementally during Stages 3–9 alongside each HW's tests; this stage just hardens the surrounding workflow). The team-side pieces are (a) a hosted-CI submission validator that runs on `ubuntu-latest`, and (b) a leaderboard aggregator that reads the submitted score JSONs from each candidate's fork.
 
