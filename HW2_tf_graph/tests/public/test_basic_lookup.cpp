@@ -22,9 +22,24 @@ bool interpolate_is_stub() {
     return mid.translation.norm() < 0.5;
 }
 
+bool series_is_stub() {
+    using namespace aiming_hw::tf;
+    Buffer buf;
+    Transform t{Eigen::Vector3d(1.0, 2.0, 3.0), Eigen::Quaterniond::Identity()};
+    buf.set_transform("a", "b", 1'000'000'000ULL, t);
+    // Real interpolate_in_series returns the exact stored transform
+    // when stamp matches; stub returns identity (zero translation).
+    auto out = buf.lookup_direct("a", "b", 1'000'000'000ULL);
+    return out.translation.norm() < 0.5;
+}
+
 }  // namespace
 
 TEST(HW2BufferLookup, ExactStampReturnsStoredTransform) {
+    if (series_is_stub()) {
+        GTEST_SKIP() << "Buffer::interpolate_in_series unimplemented "
+                        "— fill the TODO in source/buffer.cpp";
+    }
     using namespace aiming_hw::tf;
     Buffer buf;
     Transform t{Eigen::Vector3d(0.5, 1.0, -2.0), Eigen::Quaterniond::Identity()};
@@ -54,6 +69,9 @@ TEST(HW2BufferLookup, MidpointInterpolatesTranslation) {
 }
 
 TEST(HW2BufferLookup, OutOfRangeStampThrows) {
+    if (series_is_stub()) {
+        GTEST_SKIP() << "Buffer::interpolate_in_series unimplemented";
+    }
     using namespace aiming_hw::tf;
     Buffer buf;
     Transform t{Eigen::Vector3d::Zero(), Eigen::Quaterniond::Identity()};

@@ -150,41 +150,38 @@ def assign_targets(
             "cell_valid": cell_valid,
         }
 
-    centres = grid_centres.reshape(-1, 2)              # [HW, 2]
-    cx = centres[:, 0:1]                                # [HW, 1]
-    cy = centres[:, 1:2]
-    gx1, gy1, gx2, gy2 = gt_boxes_xyxy.unbind(dim=-1)   # each [G]
-
-    inside = ((cx >= gx1) & (cx <= gx2) & (cy >= gy1) & (cy <= gy2))  # [HW, G]
-    areas = (gx2 - gx1).clamp(min=1e-3) * (gy2 - gy1).clamp(min=1e-3)
-    areas = areas.unsqueeze(0).expand_as(inside.float())
-    areas = torch.where(inside, areas, torch.full_like(areas, float("inf")))
-    best_g = areas.argmin(dim=1)                       # [HW]
-    has_gt = inside.any(dim=1)                         # [HW]
-
-    for k in range(centres.shape[0]):
-        if not has_gt[k]:
-            continue
-        g = int(best_g[k].item())
-        x = float(centres[k, 0].item())
-        y = float(centres[k, 1].item())
-        cx_box = (gt_boxes_xyxy[g, 0] + gt_boxes_xyxy[g, 2]) / 2
-        cy_box = (gt_boxes_xyxy[g, 1] + gt_boxes_xyxy[g, 3]) / 2
-        wid = (gt_boxes_xyxy[g, 2] - gt_boxes_xyxy[g, 0]).clamp(min=1.0)
-        hei = (gt_boxes_xyxy[g, 3] - gt_boxes_xyxy[g, 1]).clamp(min=1.0)
-        # Inverse of model.decode_box: store offsets as (sigmoid_inv,
-        # log) so the head's raw prediction matches them after the
-        # forward decode.
-        ox = torch.tensor((cx_box - x) / stride + 0.5, device=device).clamp(1e-3, 1 - 1e-3)
-        oy = torch.tensor((cy_box - y) / stride + 0.5, device=device).clamp(1e-3, 1 - 1e-3)
-        cell_box[k // W, k % W, 0] = torch.logit(ox)
-        cell_box[k // W, k % W, 1] = torch.logit(oy)
-        cell_box[k // W, k % W, 2] = torch.log(wid)
-        cell_box[k // W, k % W, 3] = torch.log(hei)
-        cell_kpt[k // W, k % W] = gt_corners[g]
-        cell_icon[k // W, k % W] = gt_icons[g]
-        cell_obj[k // W, k % W] = 1.0
-        cell_valid[k // W, k % W] = 1.0
+    # TODO(HW1): FCOS-style positive-cell assignment.
+    #
+    # For every cell whose centre falls inside any GT box:
+    #   1. Pick the SMALLEST-area GT it falls inside (ties broken by
+    #      lower index). This is the FCOS "ambiguity-by-area" rule —
+    #      a cell that's inside two stacked GTs gets assigned to the
+    #      tighter one.
+    #   2. Store the regression + keypoint + class targets of that GT
+    #      into cell_box / cell_kpt / cell_icon / cell_obj / cell_valid
+    #      at the matching (h, w) index.
+    #
+    # cell_box's encoding mirrors model.decode_box:
+    #   cell_box[h, w, 0] = logit(((cx_gt - cell_centre_x) / stride) + 0.5)
+    #   cell_box[h, w, 1] = logit(((cy_gt - cell_centre_y) / stride) + 0.5)
+    #   cell_box[h, w, 2] = log(gt_w)
+    #   cell_box[h, w, 3] = log(gt_h)
+    # so that decode_box(forward output) ≈ ground-truth xyxy at
+    # convergence. Use torch.logit + clamp the offset to (1e-3, 1-1e-3)
+    # before taking the logit (logit(0) is -inf).
+    #
+    # Hint: vectorise the "which cells fall in which GTs" question.
+    #   inside = ((cx >= gx1) & ... & (cy <= gy2))  # [HW, G] bool
+    #   areas  = (gx2-gx1) * (gy2-gy1)              # [G]
+    #   best_g = (areas masked by inside).argmin(1) # [HW]
+    #   has_gt = inside.any(1)                       # [HW]
+    # Then loop over cells with has_gt[k] == True and write the
+    # targets. The loop is Python-level (~H*W iterations); the
+    # vectorisation above keeps the per-cell work to O(1).
+    #
+    # The current stub leaves cell_valid all-zeros, so
+    # tests/public/test_assign_targets.py detects the unfilled state
+    # via `cell_valid.sum() == 0` and xfail-skips with a clear pointer.
 
     return {
         "cell_box": cell_box,

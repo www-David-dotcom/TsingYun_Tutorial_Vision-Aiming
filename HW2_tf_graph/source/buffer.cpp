@@ -79,29 +79,34 @@ std::map<EdgeKey, std::size_t> Buffer::edge_sizes() const {
 
 Transform Buffer::interpolate_in_series(const std::vector<Stamped>& samples,
                                         std::uint64_t stamp_ns) const {
-    if (samples.empty()) {
-        throw LookupError("Buffer::interpolate_in_series: empty series");
-    }
-    if (stamp_ns < samples.front().stamp_ns ||
-        stamp_ns > samples.back().stamp_ns) {
-        std::ostringstream oss;
-        oss << "Buffer::interpolate_in_series: stamp " << stamp_ns
-            << " outside [" << samples.front().stamp_ns
-            << ", " << samples.back().stamp_ns << "]";
-        throw LookupError(oss.str());
-    }
-    if (stamp_ns == samples.front().stamp_ns) return samples.front().transform;
-    if (stamp_ns == samples.back().stamp_ns)  return samples.back().transform;
-
-    auto upper = std::lower_bound(samples.begin(), samples.end(), stamp_ns,
-                                  stamp_less);
-    // upper now points at the first sample with stamp >= stamp_ns; we
-    // bracket between upper-1 and upper.
-    const auto& lo = *(upper - 1);
-    const auto& hi = *upper;
-    const double dt = static_cast<double>(hi.stamp_ns - lo.stamp_ns);
-    const double alpha = static_cast<double>(stamp_ns - lo.stamp_ns) / dt;
-    return interpolate(lo.transform, hi.transform, alpha);
+    // TODO(HW2): bracket-search + interpolate within one edge's
+    // chronological time series.
+    //
+    // Required behaviours (the public tests pin these):
+    //   * empty `samples` → throw LookupError("…empty series").
+    //   * stamp before samples.front() OR after samples.back() →
+    //     throw LookupError with the stamp + interval in the
+    //     message. Out-of-range lookups are NOT extrapolated; HW6's
+    //     runner is supposed to keep the buffer fresh enough that
+    //     this never trips.
+    //   * stamp exactly equal to a sample's stamp → return that
+    //     sample's transform (no float rounding from interpolate).
+    //   * otherwise: binary-search the bracket [lo, hi] s.t.
+    //     lo.stamp_ns ≤ stamp_ns ≤ hi.stamp_ns, compute
+    //     alpha = (stamp_ns - lo.stamp_ns) / (hi.stamp_ns - lo.stamp_ns),
+    //     and return interpolate(lo.transform, hi.transform, alpha).
+    //
+    // Hint: std::lower_bound + the file-static `stamp_less`
+    // comparator (defined at the top of this file) gives you the
+    // bracket in O(log N) without rolling your own search.
+    //
+    // While this stub is in place, lookup_direct returns
+    // Transform::identity() for every query. The
+    // `MidpointInterpolatesTranslation` test in
+    // test_basic_lookup.cpp detects that and GTEST_SKIPs cleanly.
+    (void)samples;
+    (void)stamp_ns;
+    return Transform::identity();
 }
 
 }  // namespace tf
