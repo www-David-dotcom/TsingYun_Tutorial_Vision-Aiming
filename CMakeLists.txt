@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 project(aiming_hw
-    VERSION 1.1.0
+    VERSION 1.2.0
     DESCRIPTION "TsingYun RoboMaster Vision Group recruitment-cycle assignment template"
     LANGUAGES CXX)
 
@@ -79,6 +79,10 @@ endif()
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HW5_mpc_gimbal/CMakeLists.txt")
     add_subdirectory(HW5_mpc_gimbal)
+endif()
+
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HW6_integration/CMakeLists.txt")
+    add_subdirectory(HW6_integration)
 endif()
 
 # --- summary ------------------------------------------------------------------

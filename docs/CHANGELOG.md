@@ -4,6 +4,53 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v1.2-hw6-integration — Stage 8 (2026-04-29)
+
+Integration runner — the program that wires HW1 → HW3 → HW4 → HW5
+into one real-time loop talking to the Godot arena. ~900 LOC across
+ring buffer + watchdog + runner + main + two GTests + bilingual
+README.
+
+* **HW6 directory:** `HW6_integration/` — bilingual README,
+  CMakeLists with optional `-DAIMING_HW6_TSAN=ON` for the
+  ThreadSanitizer build, opt-in HW1 / HW5-MPC links (commented in
+  the CMakeLists; uncomment once those targets are configured).
+* **filled:** `pipeline::SpscRingBuffer` (lock-free, header-only,
+  cache-line-aligned head/tail; capacity rounded to next power of 2;
+  move-only payloads supported); `pipeline::Watchdog` (cooperative
+  timer; pet from the control thread, expiry callback fires once on
+  starvation, recovers after the next pet; thread-safe stop()).
+* **two candidate TODOs:**
+  * `source/runner.cpp::Runner::next_frame` — stale-frame drop
+    policy. Drop frames whose ID is older than
+    `latest_frame_id - max_stale_frames`. Without this the EKF
+    ingests stale frames whenever the control loop hiccups.
+  * `source/main.cpp::run_episode` — thread layout. At least three
+    threads (frame subscriber, gRPC client, control loop) with the
+    control loop pinned to a single core for the p95 ≤ 25 ms
+    target. The current placeholder only runs stats + watchdog.
+* **public tests:**
+  `hw6_ring_buffer_test` — capacity rounding, fill/drain, move-only
+  payload, 100k-element concurrent producer/consumer race.
+  `hw6_watchdog_test` — pet/expire/recover/stop behaviour with
+  fake-time backed by `std::chrono::steady_clock`.
+  Both build under `-DAIMING_HW6_TSAN=ON` for the ThreadSanitizer
+  pass on every commit.
+* **stats surface:** `Runner::stats()` returns frames_received /
+  dropped / consumed, loop iteration count, and rolling p95 latency
+  over a 256-element reservoir. HW6 acceptance bar is **p95 ≤ 25 ms**;
+  the system-level "no races over 5 episodes" bar runs against a
+  live arena, not in unit tests.
+* **CMake:** root project bumped to **1.2.0**; HW6 wired in behind
+  the same EXISTS guard. The runner CLI auto-links HW3 + HW4 +
+  HW5 PID baseline when those targets are configured (HW1 ONNX +
+  HW5 MPC opt-in via uncommented lines because their toolchains
+  are heavier).
+
+Out of scope (in `HW6_integration/README.md`): HW7 strategy /
+behaviour-tree wiring (Stage 9), gRPC client implementation
+(candidates use generated stubs), hidden grading (Stage 10).
+
 ## v1.1-hw5-mpc — Stage 7 (2026-04-29)
 
 MPC gimbal controller + the engine quality gate. Multi-language
