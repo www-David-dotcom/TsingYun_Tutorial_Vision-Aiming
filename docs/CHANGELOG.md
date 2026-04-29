@@ -4,6 +4,72 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v1.5-more-todos — Stage 11 (2026-04-29)
+
+Pedagogical pass — converts 9 previously-filled "load-bearing math"
+functions to TODO sites so candidates write more of the actual
+algorithm and less of the plumbing. Increases the per-HW TODO count
+roughly 50% across the board:
+
+| HW | Was → Now | What got opened up |
+|----|-----------|--------------------|
+| HW1 | 6 → 7 | `losses.py::assign_targets` (FCOS-style positive-cell assignment — the heart of the detector head) |
+| HW2 | 2 → 3 | `Buffer::interpolate_in_series` (binary-search bracket + interpolate; out-of-range / exact-match edges) |
+| HW3 | 4 → 6 | `motion_models::ct_transition` (the constant-turn matrix); `kalman_step::gaussian_likelihood` (multivariate-normal pdf used by IMM mode reweighting) |
+| HW4 | 2 → 3 | `projectile_model::projectile_acceleration` (gravity + quadratic drag — the physics) |
+| HW5 | 3 → 4 | `cost.py::stage_cost_expression` (quadratic state + control cost in CasADi) |
+| HW6 | 2 → 3 | `Watchdog::poll_loop` (the threaded poll loop with single-fire-on-starvation, recover-after-pet semantics) |
+| HW7 | 2 → 4 | `Sequence::tick` + `Selector::tick` (BT control-flow semantics) |
+
+**Sentinel design:** every newly-stubbed function has a sentinel
+detector in the matching test file. Sentinels work by calling the
+function with an input that produces a known-non-stub output (e.g.
+`gaussian_likelihood(0, I) ≈ 0.159`; stub returns 0). When the stub
+is in place, dependent tests `GTEST_SKIP` (or `pytest.xfail`) with
+a clear pointer at the file to edit. No test that used to pass
+silently fails after this stage — only the skip set grows when
+TODOs are unfilled.
+
+**New focused tests:**
+* `HW1_armor_detector/tests/public/test_assign_targets.py` —
+  4 cases pinning empty-list, single-box assignment, smaller-GT-wins
+  ambiguity rule, decode_box round-trip.
+* `HW5_mpc_gimbal/tests/public/test_cost.py` — 4 cases pinning
+  zero-state-zero-cost, quadratic scaling, control-effort cost.
+* `HW7_strategy/tests/public/test_bt_semantics.cpp` — 6 cases
+  pinning Sequence success/early-failure, Selector first-success/
+  all-failure, Running propagation, nested Selector-over-Sequence.
+
+**Updated tests with widened sentinels:**
+* `HW2 test_basic_lookup.cpp` — `series_is_stub()` added; both
+  `ExactStampReturnsStoredTransform` and `OutOfRangeStampThrows`
+  now skip when interpolate_in_series is unfilled.
+* `HW3 test_imm_mode_probabilities.cpp` — `ct_transition_is_stub()`
+  + `gaussian_likelihood_is_stub()` added; `StraightLineFavoursCV`
+  and `ConstantTurnFavoursCT` now skip on either dependency.
+* `HW4 test_2d_with_gravity.cpp` and `test_3d_with_drag.cpp` —
+  `acceleration_is_stub()` added; all three skip sites in each
+  file now check it alongside `plan_is_stub`.
+* `HW6 test_watchdog.cpp` — `poll_loop_is_stub()` added;
+  `FiresOnceWhenStarved` and `RecoversAfterPet` skip on poll_loop
+  unfilled.
+* `HW1 test_loss_shapes.py::test_assign_targets_marks_some_cell` —
+  switched to xfail-when-stub.
+
+**Workspace + version:**
+* Root pyproject's testpaths added `HW5_mpc_gimbal/tests/public`
+  so `pytest test_cost.py` is picked up by `uv run pytest`.
+* CMake project version bumped to **1.5.0**. No new C++ targets —
+  the new BT-semantics test goes through HW7's existing
+  `gtest_discover_tests` foreach.
+
+Pytest stays 12 passed, 5 skipped on the default `uv sync` env (HW1
++ HW5 test files skip at module level for missing torch/casadi).
+Skipped count grows by 1 per opt-in dep group activated; if the
+candidate runs `uv sync --group hw1 hw5 hw7`, all 16 of the new
+test cases run and detect-stub-and-xfail until the candidate fills
+the TODOs. Ruff + py_compile clean across the project.
+
 ## v1.4-grading-v1 — Stage 10 (2026-04-29)
 
 Grading workflow v1, picked from four reviewed proposals as **Proposal A**:
