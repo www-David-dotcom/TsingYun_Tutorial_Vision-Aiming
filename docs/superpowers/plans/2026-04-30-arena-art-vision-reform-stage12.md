@@ -230,13 +230,14 @@ shared/unity_arena/MemoryCaptures/
 shared/unity_arena/*.csproj
 shared/unity_arena/*.sln
 shared/unity_arena/*.userprefs
-shared/unity_arena/Assets/Synty/
 shared/unity_arena/Assets/Lightmaps/
 *.pidb.meta
 *.pdb.meta
 *.mdb.meta
 sysinfo.txt
 ```
+
+Note: `shared/unity_arena/Assets/Synty/` is already gitignored — it landed defensively in Stage 12d Task 45's commit (`5d51dcb`) so the Synty CI guard would be meaningful before Task 1 ran. Don't re-add it here.
 
 - [ ] **Step 5: Verify clean status (after .gitignore)**
 
