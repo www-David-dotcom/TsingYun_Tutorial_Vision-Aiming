@@ -1,0 +1,104 @@
+syntax = "proto3";
+
+package tsingyun.aiming.v1;
+
+// Wire format for everything that flows from the Aiming Arena simulator
+// back to a candidate's stack. Image frames travel out-of-band over ZMQ
+// (see zmq_frame_pub) — only the descriptor + topic name is carried here
+// to keep gRPC messages under the 4 MB ceiling.
+
+message FrameRef {
+    // Monotonic frame number, starts at 0 on EnvReset and increments by 1
+    // per simulator render tick.
+    uint64 frame_id = 1;
+
+    // ZMQ topic name to subscribe to for the raw RGB bytes. Conventionally
+    // "frames.<robot_id>"; the publisher endpoint is announced in
+    // InitialState (aiming.proto).
+    string zmq_topic = 2;
+
+    // Frame timestamp in simulator-time nanoseconds since EnvReset.
+    uint64 stamp_ns = 3;
+
+    // Image dimensions in pixels.
+    uint32 width  = 4;
+    uint32 height = 5;
+
+    // Byte format. RGB888 is the v1 default; other layouts may appear later.
+    enum PixelFormat {
+        PIXEL_FORMAT_UNSPECIFIED = 0;
+        PIXEL_FORMAT_RGB888      = 1;
+        PIXEL_FORMAT_BGR888      = 2;
+        PIXEL_FORMAT_RGBA8888    = 3;
+    }
+    PixelFormat pixel_format = 6;
+}
+
+message Vector3 {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message Quaternion {
+    double w = 1;
+    double x = 2;
+    double y = 3;
+    double z = 4;
+}
+
+message Imu {
+    uint64  stamp_ns          = 1;
+    Vector3 angular_velocity  = 2;  // rad/s in chassis frame
+    Vector3 linear_accel      = 3;  // m/s^2 in chassis frame
+    Quaternion orientation    = 4;  // chassis-to-world
+}
+
+message GimbalState {
+    uint64 stamp_ns = 1;
+    double yaw      = 2;  // rad, +ccw looking down
+    double pitch    = 3;  // rad, +up
+    double yaw_rate   = 4;  // rad/s
+    double pitch_rate = 5;  // rad/s
+}
+
+message ChassisOdom {
+    uint64  stamp_ns          = 1;
+    Vector3 position_world    = 2;  // meters
+    Vector3 linear_velocity   = 3;  // m/s, world-frame
+    double  yaw_world         = 4;  // rad
+}
+
+// Optional ground-truth fields exposed only when the simulator's
+// `oracle_hints_enabled` flag is set (see schema §3.1).
+message OracleHints {
+    Vector3 target_position_world = 1;
+    Vector3 target_velocity_world = 2;
+    bool    target_visible        = 3;
+}
+
+message SensorBundle {
+    FrameRef     frame        = 1;
+    Imu          imu          = 2;
+    GimbalState  gimbal       = 3;
+    ChassisOdom  odom         = 4;
+
+    // Present only if EnvReset was called with oracle_hints=true.
+    OracleHints  oracle       = 5;
+}
+
+// Outbound from the candidate's stack to the simulator.
+message GimbalCmd {
+    uint64 stamp_ns        = 1;
+    double target_yaw      = 2;  // rad, absolute
+    double target_pitch    = 3;  // rad, absolute
+    double yaw_rate_ff     = 4;  // optional feed-forward, rad/s
+    double pitch_rate_ff   = 5;  // optional feed-forward, rad/s
+}
+
+message FireCmd {
+    uint64 stamp_ns = 1;
+    // Number of pellets requested; clamped by simulator-side barrel-heat /
+    // rate-of-fire caps.
+    uint32 burst_count = 2;
+}

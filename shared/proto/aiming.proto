@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package tsingyun.aiming.v1;
+
+import "sensor.proto";
+import "episode.proto";
+
+// Top-level service the Aiming Arena simulator exposes. A candidate's
+// stack acts as the gRPC client; the simulator (Godot or Unity) is the
+// server. See schema §3 for the full architecture diagram.
+
+service AimingArena {
+    // Start (or restart) an episode. Returns the initial sensor bundle
+    // and the ZMQ endpoint to subscribe to for image frames.
+    rpc EnvReset (EnvResetRequest) returns (InitialState);
+
+    // Drive one simulator tick. The candidate sends a gimbal command for
+    // the next interval, the simulator returns the resulting sensor bundle.
+    // Streaming version: bidirectional, one (cmd, bundle) pair per sim tick.
+    rpc EnvStep (stream GimbalCmd) returns (stream SensorBundle);
+
+    // Schedule a fire-now event. Returns immediately with a status; the
+    // actual firing happens at the next physics tick. Returning a
+    // FireResult with rejected=true means the request was clamped or
+    // dropped (e.g. barrel-heat cap, rate-of-fire violation).
+    rpc EnvPushFire (FireCmd) returns (FireResult);
+
+    // Cleanly end the episode. Returns terminal stats (EpisodeStats).
+    rpc EnvFinish (EnvFinishRequest) returns (EpisodeStats);
+}
+
+message EnvResetRequest {
+    // 64-bit seed governs map layout, opponent action sampling, and
+    // projectile spread. Same seed -> byte-identical episode.
+    uint64 seed = 1;
+
+    // "bronze" | "silver" | "gold". Selects the frozen RL opponent that
+    // will share the arena.
+    string opponent_tier = 2;
+
+    // If true, SensorBundle.oracle is populated with ground-truth target
+    // pose. For unit-testing only; production / evaluation runs leave
+    // this false.
+    bool oracle_hints = 3;
+
+    // Wall-clock duration cap. Defaults to 90 s if zero.
+    uint64 duration_ns = 4;
+}
+
+message InitialState {
+    // First sensor bundle, consistent with t=0 of the new episode.
+    SensorBundle bundle = 1;
+
+    // ZMQ PUB endpoint the candidate should subscribe to for raw image
+    // frames. Conventionally "ipc:///tmp/aiming-arena-frames" on Linux/macOS
+    // and "tcp://127.0.0.1:7656" on Windows.
+    string zmq_frame_endpoint = 2;
+
+    // Identifies the simulator build for reproducibility.
+    string simulator_build_sha256 = 3;
+}
+
+message FireResult {
+    bool   accepted          = 1;
+    // If rejected, one of: "rate_limit", "heat_cap", "no_ammo", "out_of_round".
+    string reason            = 2;
+    // Number of pellets actually queued (>= 0, may be < requested).
+    uint32 queued_count      = 3;
+}
+
+message EnvFinishRequest {
+    // If true, the simulator finalizes the replay MP4 and returns its
+    // path inside EpisodeStats.events (out-of-band).
+    bool flush_replay = 1;
+}
