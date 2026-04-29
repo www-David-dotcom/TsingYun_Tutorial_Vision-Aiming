@@ -33,5 +33,41 @@ visibility  = "anonymous"
 local_path  = "out/assets/sentinels/hello-public.txt"
 description = "1-byte file that fetch_assets.py uses to verify anonymous read on the public bucket. The sha256 above is a placeholder; populate it after the team uploads the real sentinel."
 
+# --- Stage 2 (v0.6-arena-poc) ---
+# Godot arena binaries. Built via `godot --headless --export-release` on
+# the maintainer's workstation; pushed to the public bucket so candidates
+# pull anonymously. Each entry's sha256 is a placeholder until the team
+# performs the first export + push (see shared/godot_arena/README.md).
+
+[[asset]]
+name        = "godot-arena-linux-x86_64"
+bucket      = "tsingyun-aiming-hw-public"
+key         = "assets/godot/0.6.0/aiming_arena_linux.x86_64"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "anonymous"
+local_path  = "out/assets/godot/aiming_arena_linux.x86_64"
+description = "Headless-capable Godot 4.3 server binary for Linux x86_64. Stage-2 arena PoC — see shared/godot_arena/. Placeholder digest; populate after first export."
+
+[[asset]]
+name        = "godot-arena-macos-universal"
+bucket      = "tsingyun-aiming-hw-public"
+key         = "assets/godot/0.6.0/aiming_arena_macos.zip"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "anonymous"
+local_path  = "out/assets/godot/aiming_arena_macos.zip"
+description = "Universal (arm64+x86_64) macOS .app bundle, packaged as a zip. Placeholder digest."
+
+[[asset]]
+name        = "godot-arena-windows-x86_64"
+bucket      = "tsingyun-aiming-hw-public"
+key         = "assets/godot/0.6.0/aiming_arena_win64.exe"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "anonymous"
+local_path  = "out/assets/godot/aiming_arena_win64.exe"
+description = "Standalone Windows x86_64 executable. Placeholder digest."
+
 # Add new entries below as later stages need them. Sort by name within each
 # visibility class to keep diffs reviewable.
