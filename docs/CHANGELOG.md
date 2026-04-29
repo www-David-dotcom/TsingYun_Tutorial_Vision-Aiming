@@ -4,6 +4,43 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v0.8-hw2-tf — Stage 4 (2026-04-29)
+
+Smaller assignment — the TF (transform) graph that HW6's runner uses
+to project detections from the camera frame back into world
+coordinates. Header-mostly C++ over Eigen 3.4, no ROS dep.
+
+* **HW2 directory:** `HW2_tf_graph/` — bilingual README, CMakeLists
+  that skips itself when Eigen3 isn't available, three `.hpp` +
+  two `.cpp` files (~600 LOC).
+* **filled:** `Transform` struct (translation + unit quaternion) with
+  `operator*` for points and `inverse()`; `Buffer` class storing
+  per-edge chronological time series with `set_transform`,
+  `lookup_direct`, `lookup_chain`, `prune_older_than`. Monotonic
+  inserts; out-of-range and unknown-edge lookups throw `LookupError`.
+* **two candidate TODOs in `source/interpolate.cpp`:**
+  * `tf::interpolate(a, b, alpha)` — translation lerp + quaternion
+    SLERP with the antipodal short-arc fix-up.
+  * `tf::compose(parent_to_middle, middle_to_child)` — chain two
+    rigid transforms (three lines once you've thought about it).
+* **public tests:** three GoogleTest binaries — `hw2_basic_lookup_test`,
+  `hw2_interpolation_corners_test`, `hw2_chain_compose_test`. Each
+  test detects the unfilled-TODO state via a sentinel call and
+  `GTEST_SKIP`s with a clear pointer at the file to edit, so the
+  rest of the project's CI stays green during stage close.
+* **CMake:** root project bumped to 0.8.0; HW2 subdir added behind
+  the same EXISTS guard pattern as HW1.
+
+Acceptance posture: per the Stage 4 plan, the public tests are
+expected to pass on the candidate's filled implementation. With the
+TODOs unfilled, they self-skip with a clear message — one of the
+GTEST_SKIP messages is what the candidate sees first when they run
+`ctest -R hw2`.
+
+Out of scope (and explicit in `HW2_tf_graph/README.md`): ROS 2 TF2
+integration, frame-graph BFS, thread safety. Hidden grading episodes
+deferred per `IMPLEMENTATION_PLAN.md` Stage 10.
+
 ## v0.7-hw1-detector — Stage 3 (2026-04-29)
 
 First candidate-facing assignment. HW1 is the lightweight armor +
