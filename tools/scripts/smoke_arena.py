@@ -55,11 +55,15 @@ def _recv_exact(sock: socket.socket, n: int) -> bytes:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--engine", default="godot", choices=["godot", "unity"],
+                        help="which engine the running arena is. Wire is identical between them.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=7654, type=int)
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--ticks", default=10, type=int)
     args = parser.parse_args()
+
+    print(f"[smoke] engine={args.engine} host={args.host} port={args.port}")
 
     with socket.create_connection((args.host, args.port), timeout=5) as sock:
         # 1. Reset
