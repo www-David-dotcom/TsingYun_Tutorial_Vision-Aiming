@@ -400,26 +400,48 @@ This image is published once per HW release and pinned by digest. Its purpose is
 
 ---
 
-## 7. Grading & leaderboard *(deferred)*
+## 7. Grading & leaderboard *(v1 — Proposal A)*
 
-This section is intentionally a stub. We will design the grading workflow, the score formula, the leaderboard, and the anti-cheat posture **after the HW1–HW7 scaffolds exist** (Stages 1–9 of [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)). Designing grading first risks shaping the homework around a guessed scoring scheme; designing it after lets us pick a policy that fits what we actually built and how candidates actually behave during the pilot.
+We picked **Proposal A** of the four options reviewed after Stages 1–9 closed: auto-graded public tests on every PR + a daily leaderboard cron, with the actual hire decision made by the team reading top-N PRs and interviewing in person. Cheapest of the four (~2 days of build-out vs. 10–14 for the full team-side hidden-grader option). Implementation lives in Stage 10 of [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md); candidate-facing handbook in [`docs/grading.md`](docs/grading.md).
 
-What we *have* committed to and that downstream design will inherit:
+### 7.1 What gets graded
 
-* **Episode telemetry schema** (§1.3) — every match emits a structured `episode.json` with `win_flag`, damage dealt/taken, hit accuracy, aim latency, projectile metadata. Whatever score formula we eventually pick will be a function over this object.
-* **Engine and protocol** (§§2–3) — gRPC + ZMQ contract is fixed; any grading harness, wherever it runs, talks the same wire format.
-* **Reference Docker image** (§6.3) — provides toolchain reproducibility for both candidate dev and any future grading run.
-* **Per-HW "performance signal" definitions** (§5) — these describe what each HW *measures*. The grading score is a weighted combination of these signals, weights TBD.
+* Public unit tests only — every HW already ships them (HW1: loss-shape + ONNX-roundtrip + post-process GTest; HW2: 3 GTest binaries; HW3: 3 GTest binaries; HW4: 3 GTest binaries; HW5 PID baseline: step + sinusoid; HW6: ring buffer + watchdog; HW7: priority + retreat-trigger). Candidate's score = passing public tests on `ubuntu-latest`.
+* Skipped tests don't count for or against. HW1's ONNX-Runtime path and HW5's MPC path skip cleanly via the existing CMake skip-guards; the candidate isn't penalised for not installing those toolchains.
+* Hidden tests, live-arena episodes, and build-artefact hash binding are **explicitly out of scope** for v1. They're listed as "future cycles" in `docs/grading.md`'s last section.
 
-Open questions intentionally left unanswered until Stage 10:
+### 7.2 Where grading runs
 
-* Where grading runs (candidate's machine vs the team's Orin NX vs a TA's laptop vs a cloud GPU).
-* How candidates submit (committed `submissions/`, PR-driven, OSS upload, email).
-* What the leaderboard looks like (internal vs public, real-time vs nightly, web vs CSV).
-* Anti-cheat posture (honor system, signed score JSONs, server-authoritative regrade).
-* Whether HW7 contributes to the recruiting ranking or sits in a separate stretch column.
+GitHub-hosted runners (`ubuntu-latest`). No team Orin NX, no maintainer's laptop in the critical path. CI-as-grader keeps anti-cheat to "the score derives from CI re-running every test on `pull_request.head.sha`," not from the candidate's PR description.
 
-Track the grading discussion in a future PR titled `design: grading workflow v1`.
+This commits the full grading surface to whatever fits inside a 25-minute `ubuntu-latest` job: protobuf + gRPC + Eigen3 + GTest install, full project build, ctest + pytest, JUnit-XML parsing, comment posting. About 5–10 minutes wall clock per PR.
+
+### 7.3 How candidates submit
+
+* Fork → fill TODOs → push → open PR titled `姓名 - 学号` against the candidate-facing repo's `main`.
+* CI runs `validate_submission.yml` automatically on PR open + every push. The score comment updates in place (single `<!-- aiming-hw-grader -->` marker; no comment-spam).
+* No `submissions/` directory, no zip uploads, no signed score JSONs. PR diff = submission.
+
+### 7.4 Leaderboard
+
+* `regenerate_leaderboard.yml` runs daily at 19:17 Beijing-local (`17 11 * * *` UTC, per resolved decision 8). Walks every open PR, pulls each one's most-recent `submission-score-*` artefact, sorts by total passing tests with HW-breadth tiebreaker, writes `leaderboard.{md,csv,json}` to the orphan branch `leaderboard`.
+* The branch is **internal-facing only** — candidates working on `main` don't see it; only team members who fetch the `leaderboard` branch on the upstream repo see ranking. Not a public Pages deploy.
+
+### 7.5 Anti-cheat posture
+
+Honour system, validated by CI. Specifically:
+
+* Score derives from CI's own re-run; the candidate cannot edit the `submission_score.json` artefact.
+* CI runs against `pull_request.head.sha`, so historical commits on the candidate's branch don't leak in.
+* If suspected cheating ever matters (e.g. a candidate's code looks AI-generated and tests pass), the team re-runs the candidate's frozen commit on a maintainer's laptop during interview prep. No special tooling needed beyond `git checkout <sha> && cmake --build`.
+
+### 7.6 What's intentionally *not* in v1
+
+* HW7 contributes to ranking with the same weight as the others. No "bonus column."
+* Per-test weighting (e.g. counting an EKF test as worth 3 of an HW2 test) — score is a flat passing-test count.
+* Public leaderboard, web UI, real-time scoring. None of those move the needle for a 50-candidate recruitment cycle.
+
+Inheriting from §§1–6 (unchanged): episode telemetry schema, gRPC + ZMQ contract, reference Docker image, per-HW performance signals.
 
 ---
 

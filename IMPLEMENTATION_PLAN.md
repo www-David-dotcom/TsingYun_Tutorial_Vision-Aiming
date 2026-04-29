@@ -1,7 +1,7 @@
 # Aiming_HW — Per-Stage Implementation Plan
 
-> Plan version 0.4 — schema bumped to v0.4 (grading deferred); decisions tagged with **\[grading]** below are now considered open and will be revisited when `schema.md` §7 is designed.
-> Companion to [`schema.md`](schema.md) v0.4. Stops at the level of "what files land in each commit, and how do I know the stage is done." Once approved, each stage is implemented on a short-lived branch, reviewed, fast-forward-merged into `main`, and tagged.
+> Plan version 0.5 — Stage 10 designed (Proposal A: auto-graded public tests + honour system + manual interview of top-N). All `[grading — deferred]` decisions from v0.4 are resolved; the heavier alternatives (hidden tests, simulator-driven episodes, build-artefact hash binding) are recorded as future-cycle targets in `docs/grading.md`.
+> Companion to [`schema.md`](schema.md) v0.5. Stops at the level of "what files land in each commit, and how do I know the stage is done." Once approved, each stage is implemented on a short-lived branch, reviewed, fast-forward-merged into `main`, and tagged.
 
 ---
 
@@ -11,14 +11,14 @@
 
 1. **`godot_rl_agents`** is **vendored** at a pinned commit under `shared/godot_arena/addons/godot_rl_agents/`. We do not fork unless and until we need a patch upstream won't accept.
 2. **Asset blobs live on Aliyun OSS in `cn-beijing`** (华北 2 / Beijing). Three buckets exist: `tsingyun-aiming-hw-public` (anonymous-read, candidate-facing static assets), `tsingyun-aiming-hw-models` (private, SSE-OSS, holds opponent policies + reference detector ONNX), `tsingyun-aiming-hw-cache` (private, build/image cache). The repo carries SHA-256 pointers in `shared/assets/manifest.toml` and a `shared/scripts/fetch_assets.py` resolver. We are deliberately **not** using Git LFS (bandwidth pricing, no encryption story).
-3. **\[grading — deferred]** Grading topology was previously set to "candidate's own machine"; that decision is now reopened pending `schema.md` §7. Stages 1–9 do not depend on it.
+3. **Grading topology** is **GitHub-hosted CI on `ubuntu-latest`** for the auto-grade pass, plus manual review of the top-N PRs by the team. No candidate-side grader CLI in v1; no team Orin NX in v1. See `docs/grading.md` for the candidate-facing handbook.
 4. **The candidate-facing repo is [`www-David-dotcom/TsingYun_Tutorial_Vision-Aiming`](https://github.com/www-David-dotcom/TsingYun_Tutorial_Vision-Aiming).** Candidates fork it, work in their fork, and open a PR back to it for submission. Stage 1+ work lands in this repo's `main` branch.
-5. **\[grading — deferred]** Models-bucket access pattern (shared AccessKey vs RAM role vs presigned URL) was tied to the previous grading decision; reopened pending §7. For Stages 1–9 the team accesses `tsingyun-aiming-hw-models` directly via team RAM credentials.
-6. **\[grading — deferred]** Anti-cheat posture is now part of §7's redesign.
-7. **\[grading — deferred]** GH-hosted runner usage scope is part of §7's redesign. (We can still use `ubuntu-latest` for lint and build smoke during Stages 1–9; that's not grading.)
-8. **All scheduled work is pinned to `Asia/Shanghai`.** Cron expressions in workflow YAML are documented as Beijing-local; the leaderboard regen wakes at minute 17 of the hour by convention.
+5. **Models-bucket access pattern** stays as **direct team RAM credentials** for v1 (the candidate's CI never reads the private bucket — only the team does, when manually reviewing top-N PRs). The shared AccessKey + RAM-role surface is recorded as a v2 upgrade in `docs/grading.md` § "future cycles."
+6. **Anti-cheat posture** is **honour system, validated by CI**. The score is derived from CI re-running every test on `pull_request.head.sha`; candidates can't edit the `submission_score.json` artefact, and historical commits don't leak in. Suspected cheating is handled at interview time by re-running the candidate's frozen commit on a maintainer's laptop. No signed score JSONs in v1.
+7. **GH-hosted runner usage scope** is **the entire grading surface**. `validate_submission.yml` runs the full ctest + pytest matrix on every PR; `regenerate_leaderboard.yml` runs daily as a scheduled cron. ~25 minutes runner time per PR + ~3 minutes for the daily aggregator.
+8. **All scheduled work is pinned to `Asia/Shanghai`.** Cron expressions in workflow YAML are documented as Beijing-local; the leaderboard regen wakes at 19:17 Beijing-local (`17 11 * * *` UTC).
 
-These decisions reshape Stage 10 (now centered on submit-and-aggregate, not run-and-aggregate) and require Stage 1 to provision the read-only AccessKey + manifest format up front.
+Stage 10 v1 is the implementation of decisions 3, 5, 6, 7. The earlier "candidate-side grader CLI + signed score JSONs + build-artefact hash binding" sketch is preserved in `docs/grading.md` § "future cycles" as the v2 upgrade path; it didn't make v1 because Proposal A came in cheaper and is sufficient for a 50-candidate cycle.
 
 ---
 
@@ -673,100 +673,88 @@ Multi-agent communication beyond the simple ally-NPC channel; full game-theoreti
 
 ---
 
-## Stage 10 — Grading workflow & launch *(design deferred)*
+## Stage 10 — Grading workflow v1 (Proposal A)
 
-> **Per the v0.4 schema decision to defer grading**, this entire stage is a sketch awaiting redesign. The body below is the v0.3 draft (candidate-side grader, GH-hosted aggregator) preserved for context — it should be **treated as superseded**, not as a commitment. Once HW1–HW7 scaffolds (Stages 1–9) are landed, we'll write `design: grading workflow v1` against `schema.md` §7, then rewrite this stage to match. Until then, treat Stages 1–9 as the active scope.
+* **Branch**: `stage10/grading-v1`
+* **End tag**: `v1.4-grading-v1`
+* **Maps to schema**: §7 (filled in by this stage)
+* **Calendar estimate**: 2 working days
 
----
+After Stages 1–9 closed, the team reviewed four grading-design proposals (auto-grade only; auto-grade + hidden eval; full Orin-NX leaderboard; manual review). **Proposal A — auto-graded public tests + honour system + manual interview of top-N** was picked as the lightest viable v1; the heavier proposals carry over to a future cycle (see `docs/grading.md` § "future cycles").
 
-### (Superseded v0.3 sketch follows)
+This stage is the implementation of Proposal A. The (now superseded) v0.3 draft of Stage 10, which assumed a candidate-side grader CLI + signed score JSONs + build-artefact hash binding, is **not** being shipped — that surface lives in `docs/grading.md`'s last section as a future-cycle target.
 
-This stage is split into two sub-stages because the launch waits on the pilot. Per resolved decisions 3, 6, and 7: **the grader CLI lives in the candidate-facing repo and runs on the candidate's machine** (it was actually scaffolded incrementally during Stages 3–9 alongside each HW's tests; this stage just hardens the surrounding workflow). The team-side pieces are (a) a hosted-CI submission validator that runs on `ubuntu-latest`, and (b) a leaderboard aggregator that reads the submitted score JSONs from each candidate's fork.
+### Goals
+1. **`validate_submission.yml`** — PR-triggered workflow on `pull_request: opened|synchronize|reopened|ready_for_review`. Checks out `head.sha`, installs the C++ toolchain (cmake + g++-12 + libeigen3 + libgtest), `uv sync`, builds, runs `ctest --output-junit ctest_results.xml`, runs `pytest --junit-xml pytest_results.xml`, scores the result, posts (or updates in place) a single PR comment with the per-HW pass/fail/skip breakdown. Concurrency-cancels on push so candidate iteration is cheap.
+2. **`regenerate_leaderboard.yml`** — daily cron at `17 11 * * *` UTC (= 19:17 Beijing-local). Walks every open PR, pulls the latest `submission-score-*` artefact, sorts (total passing tests desc, then HW-breadth desc), writes `leaderboard.{md,csv,json}` to an orphan `leaderboard` branch. Branch is internal — candidates working on `main` don't see it.
+3. **`tools/leaderboard/score_pr.py`** — JUnit-XML parser. Buckets test cases by HW directory or `HW{N}` test-class prefix, emits both `submission_score.json` (machine-readable) and `submission_score.md` (PR-comment body).
+4. **`tools/leaderboard/aggregate.py`** — driven by `regenerate_leaderboard.yml`. Uses `gh pr list` + `gh run download` to pull every PR's latest score, sorts, writes the three leaderboard files.
+5. **Bilingual candidate handbook** at `docs/grading.md` — submission flow, what gets graded, what's known-skipped, troubleshooting, ops notes for the team.
 
-### Stage 10a — Submission flow & leaderboard
-
-* **Branch**: `stage10/grader`
-* **End tag**: `v1.2-grader`
-* **Calendar estimate**: 3–4 working days
-
-#### Goals
-1. Finalize the candidate-side grader CLI as a shippable subtree of the assignment repo (`tools/grader/`). Provide a top-level `Makefile` target so candidates type `make grade HW=3` to run all 20 graded seeds locally; output writes to `submissions/hw3/score.json` plus `submissions/hw3/replays/{best,worst,median}.mp4` + `submissions/hw3/build_meta.json` (commit SHA, build artifact SHA-256, seed-manifest hash, image digest, host fingerprint).
-2. Add `make submit HW=3` which `git add submissions/hw3/`, opens an editor for the PR description template, and shows the candidate the diff.
-3. **Team-side ingestion runs on GitHub-hosted runners** (per resolved decision 7). Two workflows on the candidate-facing repo:
-   * `validate_submission.yml` (trigger: PR or push to `submissions/**`) — runs `python tools/leaderboard/validate.py` to: (a) check JSON schema, (b) verify commit SHA in `build_meta.json` matches `${{ github.sha }}`, (c) verify seed-manifest hash matches the canonical hash baked into the workflow YAML, (d) verify build artifact SHA-256 by re-running the candidate's `cmake --build` and hashing. If any check fails, the workflow comments on the PR with the failure reason.
-   * `regenerate_leaderboard.yml` (trigger: schedule `17 19 * * *` Beijing-time = `17 11 * * *` UTC; also dispatch-on-merge) — fetches all candidates' latest validated `submissions/**/score.json` via `gh api`, runs `python tools/leaderboard/aggregate.py`, regenerates `leaderboard.html` + `leaderboard.csv`, pushes to a private `tsingyun-leaderboard` repo for the team to view. No public Pages deploy.
-4. Author the bilingual candidate handbook (`docs/candidate_handbook.md`) covering install, dataset regeneration, `make grade` workflow, and how to interpret the score JSON. Internal guide (`docs/team_internal.md`) covers operating the workflows, rotating the OSS reader AccessKey, and the spot-check re-grade procedure.
-5. Implement a thin **spot-check helper**: `python tools/leaderboard/regrade.py --candidate alice --hw 3 --commit abc123` lets any TA re-run the grader on their own laptop against a candidate's frozen commit. Used at recruiting-decision time on top-N finalists, not routinely.
-
-#### Files to create
+### Files to create
 ```
-tools/grader/                            # ships in the candidate-facing repo from Stage 1 onward;
-│                                        # this stage closes out the wrapper UX
-├── run.py                               # the per-HW grader entry point (incrementally extended in Stages 3–9)
-├── pull_image.sh                        # docker pull from oss://tsingyun-aiming-hw-cache/...
-├── image.lock                           # pinned digest of aiming-hw-grader
-├── seeds.txt                            # the canonical 20 graded seeds (public)
-└── Makefile.fragments/                  # `make grade`, `make submit` targets included by top-level Makefile
+.github/workflows/
+├── lint_and_build.yml                   # already shipped in Stage 1; unchanged
+├── validate_submission.yml              # NEW — PR-triggered grader
+└── regenerate_leaderboard.yml           # NEW — daily aggregator cron
 
-tools/leaderboard/                       # team-side; runs on GH-hosted runners and any TA's laptop
-├── validate.py                          # invoked by validate_submission.yml on PR
-├── aggregate.py                         # invoked by regenerate_leaderboard.yml; reads all forks' latest score.json
-├── regrade.py                           # spot-check on any TA's laptop, no shared infra
-├── schema/
-│   └── score_v1.json                    # JSON-Schema for submissions/**/score.json
-└── templates/
-    └── leaderboard.html.j2
+tools/leaderboard/
+├── score_pr.py                          # JUnit XML → per-HW JSON + Markdown
+└── aggregate.py                         # gh-pr-walking aggregator
 
-.github/workflows/                       # in the candidate-facing repo
-├── lint_and_build.yml                   # candidates' fork inherits this; smoke build on push
-├── validate_submission.yml              # runs only when files under submissions/** change
-└── regenerate_leaderboard.yml           # team-only; lives on the upstream repo, not on forks
-
-docs/
-├── candidate_handbook.md                # bilingual (Chinese primary, English summary)
-├── team_internal.md                     # team-only: workflows, key rotation, regrade procedure
-└── threat_model.md                      # what we deter, what we accept, why honor-system is fine for n=50
+docs/grading.md                          # bilingual candidate handbook
 ```
 
-#### LOC budget
-~ 700 LOC (Python: 500, workflow YAML: 100, docs: 100). Same total as the v0.2 plan — the surface moved from "team CLI" to "candidate CLI + team CI workflows," not grew.
+### What is *not* in v1 (future-cycle targets)
 
-#### Smoke check
+* Hidden tests / team-side simulator-driven episode evaluation. The infrastructure in `IMPLEMENTATION_PLAN.md` Stage 10 v0.3's draft (build-artefact hash binding, signed score JSONs, spot-check regrade helper) is recorded in `docs/grading.md` § "future cycles" as the v2 upgrade path.
+* Live-arena episodes vs bronze/silver/gold. Out of scope until the bronze + silver + gold policies actually train (manifest carries placeholders today).
+* `submissions/` directory pattern, `make grade` / `make submit` candidate UX. The PR diff is the submission; no committed score JSONs.
+* Public Pages deploy or web UI for the leaderboard. CSV + Markdown on the orphan branch is enough for 50 candidates.
+* Pilot run with internal volunteers (the v0.3 Stage 10b sub-stage). Defer until the team has pushed the workflows to the candidate-facing repo and seen one full cycle.
+
+### LOC budget
+~ 700 LOC (workflow YAML: 200, Python: 350, docs: 150).
+
+### Smoke check
 ```bash
-# Candidate side, simulating a known-good HW1 solution:
-cd /tmp && git clone fork-with-known-good-hw1 cand && cd cand
-make grade HW=1
-ls submissions/hw1/  # expect score.json, replays/, build_meta.json
-make submit HW=1     # opens PR template
+# Local: produce a fake CTest XML + pytest XML from a clean checkout, score it.
+cd /tmp/checkout
+ctest --preset linux-debug --output-junit ctest_results.xml
+uv run pytest --junit-xml pytest_results.xml
+uv run python tools/leaderboard/score_pr.py \
+    --ctest-xml ctest_results.xml \
+    --pytest-xml pytest_results.xml \
+    --out /tmp/score.json --markdown /tmp/score.md
+cat /tmp/score.md  # eyeball the table
 
-# Team side (after the candidate's PR opens upstream):
-gh workflow run validate_submission.yml --ref pr/123       # expect green
-gh workflow run regenerate_leaderboard.yml                  # expect leaderboard.html updated
+# CI: open a draft PR, mark it ready-for-review, watch validate_submission run.
+# Expect a single comment on the PR within 10 minutes.
+
+# Cron: trigger by hand from the Actions tab.
+gh workflow run "regenerate leaderboard"
+git fetch origin leaderboard
+git show origin/leaderboard:leaderboard/leaderboard.md
 ```
 
-#### Acceptance criteria
-* `make grade HW=1` runs end-to-end on a candidate's CPU-only machine in ≤ 15 minutes per 20-seed batch.
-* `make grade HW=1` is idempotent: same commit + same image digest produces the same score JSON modulo a `run_id` timestamp.
-* `validate_submission.yml` rejects: forged commit SHA in `build_meta.json`, mismatched seed-manifest hash, build-artifact-hash mismatch (catches "I edited score.json after the run").
-* `regenerate_leaderboard.yml` finishes in < 5 minutes on `ubuntu-latest` for 50 candidates × 7 HWs.
-* `tools/leaderboard/regrade.py` reproduces a candidate's score within ±0.5 points across machines, given the same image digest.
-* `docs/threat_model.md` enumerates: (a) what an adversarial candidate can do (extract Docker image, edit score.json then push, replay an old high score), (b) what the validator catches (commit binding, build-hash binding, seed-hash binding), (c) what we accept (honor system at n=50; spot-check any top-10 candidate before a hire decision).
+### Acceptance criteria
+* `validate_submission.yml` runs to completion on a clean PR in < 12 minutes wall-clock on `ubuntu-latest`.
+* The PR comment is posted exactly once per PR — push N times, comment is updated, not duplicated. Verified by the `<!-- aiming-hw-grader -->` marker check.
+* `score_pr.py` partitions every test in the project to one of `HW1..HW7` or `shared`. No "unbucketed" cases.
+* `regenerate_leaderboard.yml` produces a `leaderboard.csv` whose row count equals the count of open PRs with completed `validate_submission` runs.
+* `docs/grading.md` covers submission flow, anti-cheat posture, known-skipped tests, and team-side ops in both Chinese and English.
 
-### Stage 10b — Pilot & launch
+### Risks
+* **GitHub Actions outage on cutoff day** — `validate_submission` won't run, PRs sit unscored. Mitigation: the workflow is idempotent + dispatch-able; team can re-trigger manually with `gh workflow run "validate submission" --ref pr-branch`.
+* **CI runner can't apt-install the toolchain** (transient apt repo failures). Mitigation: candidates push an empty commit (`git commit --allow-empty -m "ci: retry"`); workflow re-runs.
+* **A candidate's tests time out** (e.g. infinite loop in their TODO impl). Mitigation: `timeout-minutes: 25` cap on the job; the comment shows which test hung.
+* **Comment spam from PR re-runs** — addressed by the `<!-- aiming-hw-grader -->` marker that lets `actions/github-script` find and update the existing comment in place.
 
-* **Branch**: `stage10/launch`
-* **End tag**: `v1.3-launch`
-* **Calendar estimate**: 7–10 working days (depends on pilot findings)
+### Out of scope for Stage 10 (deferred to v2)
 
-#### Goals
-1. Run 3 internal volunteers through HW1–HW7 cold; collect timing, friction points, and bug reports.
-2. Apply fixes to the per-HW READMEs and any test calibration.
-3. Cut the public-but-internal-leaderboard launch tag.
-
-#### Acceptance criteria
-* Each pilot completes HW1–HW6 in ≤ 70 hours (matches the schema's bar).
-* No single bug blocked any pilot for > 30 minutes.
-* CHANGELOG entry documents every README/test calibration delta.
+* Hidden tests, signed score JSONs, build-artefact hash binding (per `docs/grading.md` § "future cycles").
+* Pilot run with internal volunteers — separate `stage10b/pilot` branch when scheduled.
+* Migrating the leaderboard to a public Pages site — deliberately not done; `leaderboard` branch stays private to the team.
 
 ---
 
