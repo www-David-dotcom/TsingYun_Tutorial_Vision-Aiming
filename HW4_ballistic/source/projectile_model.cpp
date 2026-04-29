@@ -8,16 +8,26 @@ namespace ballistic {
 
 Eigen::Vector3d projectile_acceleration(const ProjectileParams& params,
                                         const Eigen::Vector3d& velocity) {
-    Eigen::Vector3d a(0.0, 0.0, params.gravity_z);
-    const double speed = velocity.norm();
-    if (speed > 1e-9 && params.drag_coefficient > 0.0) {
-        const double drag_mag = 0.5 * params.air_density *
-                                params.drag_coefficient *
-                                params.frontal_area_m2 *
-                                speed * speed;
-        a += -velocity / speed * (drag_mag / params.mass_kg);
-    }
-    return a;
+    // TODO(HW4): the per-step acceleration on the projectile —
+    // gravity plus quadratic aerodynamic drag.
+    //
+    //   gravity    a_g = (0, 0, params.gravity_z)        // Z-up world
+    //   drag mag   F_d = 0.5 * ρ * Cd * A * |v|²         // Newtons
+    //   drag dir   along -v̂, i.e. opposite the velocity
+    //   total      a = a_g + (-v / |v|) * (F_d / mass)
+    //
+    // Edge cases:
+    //   * |v| < 1e-9 → drag is undefined; return only gravity.
+    //   * params.drag_coefficient == 0 → no drag (the no-drag preset
+    //     short-circuits this; you can also `if (Cd == 0) skip`).
+    //
+    // The RK4 integrator in this file calls this every substep; if
+    // it returns zero, the bullet hovers in place and every shot
+    // returns t = 0 → the public tests detect that via the
+    // `acceleration_is_stub` sentinel in test_3d_with_drag.cpp.
+    (void)params;
+    (void)velocity;
+    return Eigen::Vector3d::Zero();
 }
 
 namespace {

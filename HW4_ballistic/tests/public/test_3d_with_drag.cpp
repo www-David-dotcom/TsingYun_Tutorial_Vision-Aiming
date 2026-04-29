@@ -18,10 +18,17 @@ bool plan_is_stub() {
     return !plan.converged;
 }
 
+bool acceleration_is_stub() {
+    using namespace aiming_hw::ballistic;
+    auto a = projectile_acceleration(ProjectileParams::rm_17mm(),
+                                     Eigen::Vector3d::Zero());
+    return a.z() > -1.0;
+}
+
 }  // namespace
 
 TEST(HW43DWithDrag, ConvergesInUnderEightIterations) {
-    if (plan_is_stub()) GTEST_SKIP() << "plan_shot unimplemented";
+    if (plan_is_stub() || acceleration_is_stub()) GTEST_SKIP() << "plan_shot or projectile_acceleration unimplemented";
     using namespace aiming_hw::ballistic;
     auto params = ProjectileParams::rm_17mm();
     auto plan = plan_shot(params,
@@ -35,7 +42,7 @@ TEST(HW43DWithDrag, ConvergesInUnderEightIterations) {
 }
 
 TEST(HW43DWithDrag, BulletPositionAtConvergedTimeMatchesLead) {
-    if (plan_is_stub()) GTEST_SKIP() << "plan_shot unimplemented";
+    if (plan_is_stub() || acceleration_is_stub()) GTEST_SKIP() << "plan_shot or projectile_acceleration unimplemented";
     using namespace aiming_hw::ballistic;
     auto params = ProjectileParams::rm_17mm();
     Eigen::Vector3d muzzle(0.0, 0.0, 0.4);
@@ -52,7 +59,7 @@ TEST(HW43DWithDrag, BulletPositionAtConvergedTimeMatchesLead) {
 }
 
 TEST(HW43DWithDrag, NearTargetHitRateIsHigh) {
-    if (plan_is_stub()) GTEST_SKIP() << "plan_shot unimplemented";
+    if (plan_is_stub() || acceleration_is_stub()) GTEST_SKIP() << "plan_shot or projectile_acceleration unimplemented";
     using namespace aiming_hw::ballistic;
     auto params = ProjectileParams::rm_17mm();
     int hits = 0;

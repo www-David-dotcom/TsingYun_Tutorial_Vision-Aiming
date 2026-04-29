@@ -19,10 +19,19 @@ bool plan_is_stub() {
     return !plan.converged;
 }
 
+bool acceleration_is_stub() {
+    using namespace aiming_hw::ballistic;
+    // True accel for rm_17mm at zero velocity is gravity only:
+    // (0, 0, -9.81). Stub returns zero.
+    auto a = projectile_acceleration(ProjectileParams::rm_17mm(),
+                                     Eigen::Vector3d::Zero());
+    return a.z() > -1.0;
+}
+
 }  // namespace
 
 TEST(HW42DWithGravity, AimLiftsAboveTargetForDrop) {
-    if (plan_is_stub()) GTEST_SKIP() << "plan_shot unimplemented";
+    if (plan_is_stub() || acceleration_is_stub()) GTEST_SKIP() << "plan_shot or projectile_acceleration unimplemented";
     using namespace aiming_hw::ballistic;
     auto params = ProjectileParams::no_drag();
     Eigen::Vector3d muzzle = Eigen::Vector3d::Zero();
@@ -44,7 +53,7 @@ TEST(HW42DWithGravity, AimLiftsAboveTargetForDrop) {
 }
 
 TEST(HW42DWithGravity, FartherTargetNeedsMoreLift) {
-    if (plan_is_stub()) GTEST_SKIP() << "plan_shot unimplemented";
+    if (plan_is_stub() || acceleration_is_stub()) GTEST_SKIP() << "plan_shot or projectile_acceleration unimplemented";
     using namespace aiming_hw::ballistic;
     auto params = ProjectileParams::no_drag();
     auto near_plan = plan_shot(params, Eigen::Vector3d::Zero(), 25.0,
@@ -59,7 +68,7 @@ TEST(HW42DWithGravity, FartherTargetNeedsMoreLift) {
 }
 
 TEST(HW42DWithGravity, FlightTimeMatchesAnalyticForFlatRange) {
-    if (plan_is_stub()) GTEST_SKIP() << "plan_shot unimplemented";
+    if (plan_is_stub() || acceleration_is_stub()) GTEST_SKIP() << "plan_shot or projectile_acceleration unimplemented";
     using namespace aiming_hw::ballistic;
     auto params = ProjectileParams::no_drag();
     // For a same-height target, flight time at low elevation is

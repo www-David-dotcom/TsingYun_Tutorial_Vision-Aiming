@@ -27,10 +27,26 @@ bool imm_is_stub() {
     return out.x.norm() < 0.05;
 }
 
+bool ct_transition_is_stub() {
+    using namespace aiming_hw::ekf;
+    // True ct_transition(0.1, 4.0) has F(2, 2) = cos(0.4) ≈ 0.921;
+    // the stub returns identity so F(2, 2) = 1.
+    StateMat F = ct_transition(0.1, 4.0);
+    return std::abs(F(2, 2) - 1.0) < 1e-6;
+}
+
+bool gaussian_likelihood_is_stub() {
+    using namespace aiming_hw::ekf;
+    // True value at y=0, S=I is 1/(2π) ≈ 0.159; stub returns 0.
+    return gaussian_likelihood(MeasVec::Zero(), MeasMat::Identity()) < 0.05;
+}
+
 }  // namespace
 
 TEST(HW3ImmModeProbabilities, SumsToOneEveryStep) {
-    if (imm_is_stub()) GTEST_SKIP() << "imm/predict/update unimplemented";
+    if (imm_is_stub() || gaussian_likelihood_is_stub()) {
+        GTEST_SKIP() << "imm / predict / update / gaussian_likelihood unimplemented";
+    }
     using namespace aiming_hw::ekf;
     Imm imm;
     StateVec x0;
@@ -53,7 +69,9 @@ TEST(HW3ImmModeProbabilities, SumsToOneEveryStep) {
 }
 
 TEST(HW3ImmModeProbabilities, StraightLineFavoursCV) {
-    if (imm_is_stub()) GTEST_SKIP() << "imm/predict/update unimplemented";
+    if (imm_is_stub() || gaussian_likelihood_is_stub() || ct_transition_is_stub()) {
+        GTEST_SKIP() << "imm / predict / update / gaussian_likelihood / ct_transition unimplemented";
+    }
     using namespace aiming_hw::ekf;
     Imm imm;
     StateVec x0;
@@ -74,7 +92,9 @@ TEST(HW3ImmModeProbabilities, StraightLineFavoursCV) {
 }
 
 TEST(HW3ImmModeProbabilities, ConstantTurnFavoursCT) {
-    if (imm_is_stub()) GTEST_SKIP() << "imm/predict/update unimplemented";
+    if (imm_is_stub() || gaussian_likelihood_is_stub() || ct_transition_is_stub()) {
+        GTEST_SKIP() << "imm / predict / update / gaussian_likelihood / ct_transition unimplemented";
+    }
     using namespace aiming_hw::ekf;
     ImmConfig cfg = ImmConfig::default_config();
     cfg.omega_ct = 4.0;

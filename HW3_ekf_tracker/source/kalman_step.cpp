@@ -53,14 +53,27 @@ UpdateResult update(const GaussianBelief& belief,
 }
 
 double gaussian_likelihood(const MeasVec& y, const MeasMat& S) {
-    constexpr double kTwoPi = 2.0 * 3.141592653589793238462643383279502884;
-    const double det_S = S.determinant();
-    if (det_S <= 0.0) {
-        return 1e-300;
-    }
-    const double norm = 1.0 / std::sqrt(kTwoPi * kTwoPi * det_S);
-    const double expo = -0.5 * (y.transpose() * S.inverse() * y).value();
-    return norm * std::exp(expo);
+    // TODO(HW3): multivariate-normal pdf at the innovation y under
+    // covariance S. Used by IMM to weight each mode's posterior.
+    //
+    //   p(y) = 1 / sqrt((2π)^d * |S|) * exp(-0.5 * y^T S^{-1} y)
+    //
+    // Here d = 2 (the measurement dimension) so (2π)^d = 4π² ≈ 39.48.
+    // Guard against |S| ≤ 0 (numerical issue with rank-deficient S);
+    // return ~1e-300 in that case so the IMM doesn't divide by zero.
+    //
+    // Hint: pull `.value()` off `(y.transpose() * S.inverse() * y)`
+    // to coerce the 1×1 expression to a double.
+    //
+    // While this stub returns 0.0, the IMM's mode-probability update
+    // sees zero likelihoods for both modes, falls back to the
+    // uniform-prior recovery branch, and never lets either mode
+    // dominate. The `StraightLineFavoursCV` and `ConstantTurnFavoursCT`
+    // tests detect this state via the `imm_is_stub` sentinel and
+    // skip cleanly.
+    (void)y;
+    (void)S;
+    return 0.0;
 }
 
 }  // namespace ekf
