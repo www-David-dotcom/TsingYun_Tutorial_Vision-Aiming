@@ -8,7 +8,7 @@
 ## Resolved decisions (rolled in from v0.1's open questions)
 
 1. **`godot_rl_agents`** is **vendored** at a pinned commit under `shared/godot_arena/addons/godot_rl_agents/`. We do not fork unless and until we need a patch upstream won't accept.
-2. **Model blobs live on a private OSS bucket** (`tsingyun-aiming-hw-models`). The repo carries SHA-256 pointers in `shared/assets/manifest.toml` and a small `shared/scripts/fetch_assets.py` that pulls the blobs into `out/assets/` on demand. We are deliberately **not** using Git LFS — OSS gives us cheaper bandwidth, KMS encryption for opponent policies, and a single asset story that already covers Godot binaries and the HW1 starter dataset.
+2. **Model blobs live on a private OSS bucket** (`tsingyun-aiming-hw-models`). The repo carries SHA-256 pointers in `shared/assets/manifest.toml` and a small `shared/scripts/fetch_assets.py` that pulls the blobs into `out/assets/` on demand. We are deliberately **not** using Git LFS — OSS gives us cheaper bandwidth, server-side encryption with OSS-managed keys (SSE-OSS, no separate KMS service required), and a single asset story that already covers Godot binaries and the HW1 starter dataset.
 3. **Grading runs on the team's local GPU box, manually.** No GitHub Actions self-hosted runner, no ARC, no rented cloud GPU. The grader is a CLI a team member invokes against a clean throwaway worktree of the candidate's fork; the leaderboard is a generated CSV/HTML, not a live service. **The grader and leaderboard exist for grading, not for "running"** — there is no daemon, no autoscaler, no web app to keep alive.
 4. **All scheduled work is pinned to `Asia/Shanghai`.** If we ever add a launchd/systemd timer for the leaderboard refresh, it sets `TZ=Asia/Shanghai`; cron expressions in repo are documented as Shanghai-local.
 
@@ -59,7 +59,7 @@ LOC ranges are guidance for sizing review effort, not hard caps. Tests count tow
 3. Establish reproducible Python (`uv`) and C++ (`cmake` + vcpkg) build pipelines.
 4. Ship a runnable gRPC echo + ZMQ frame stream so HW1 onward have a stable simulator-side stub to point at while the real Godot scene is being built in parallel.
 5. Build the grader Docker image locally and tag it `aiming-hw-grader:0.1`. The image exists for reproducible local grading on the team box (per resolved decision 3); it does **not** need to be pushed to a public registry, though we may push it to the OSS cache bucket as backup.
-6. Provision the OSS buckets (`tsingyun-aiming-hw-public`, `tsingyun-aiming-hw-models`, optional `…-cache`), set bucket ACLs / KMS / lifecycle rules, and ship `shared/scripts/fetch_assets.py` plus `shared/assets/manifest.toml` so every later stage can declare its asset deps without reinventing the fetcher.
+6. Provision the OSS buckets (`tsingyun-aiming-hw-public`, `tsingyun-aiming-hw-models`, optional `…-cache`), set bucket ACLs / SSE-OSS encryption / lifecycle rules, and ship `shared/scripts/fetch_assets.py` plus `shared/assets/manifest.toml` so every later stage can declare its asset deps without reinventing the fetcher.
 
 ### Files to create
 ```
@@ -775,14 +775,14 @@ Per resolved decisions 2 and 3, the original 5-bucket layout collapses to **two 
 | Bucket | Status | Contents | ACL | Lifecycle | Versioning | Encryption |
 |---|---|---|---|---|---|---|
 | `tsingyun-aiming-hw-public` | **required** | Godot binaries × 3 OSes; HW1 starter dataset (~1.8 GB); HW2/3/4 fixtures > 100 MB; candidate-facing docs PDFs | `public-read` (write: team only) | none; CDN-fronted; cross-region replication if international candidates | on | OSS-managed |
-| `tsingyun-aiming-hw-models` | **required** | bronze/silver/gold opponent `.pt` + checkpoints; reference detector `.onnx` (grader-only); replay bag fixtures > 50 MB; any blob the team would otherwise have committed binary-naked into the repo | `private`; only `aiming-hw-grader` and `aiming-hw-team` RAM roles can read | none; abort old object versions > 90 d | **on** (rollback path for a bad gold policy) | **KMS** (cheap, prevents accidental policy leakage) |
+| `tsingyun-aiming-hw-models` | **required** | bronze/silver/gold opponent `.pt` + checkpoints; reference detector `.onnx` (grader-only); replay bag fixtures > 50 MB; any blob the team would otherwise have committed binary-naked into the repo | `private`; only `aiming-hw-grader` and `aiming-hw-team` RAM roles can read | none; abort old object versions > 90 d | **on** (rollback path for a bad gold policy) | **SSE-OSS** (server-side encryption with OSS-managed keys; free, no Aliyun KMS service needed) |
 | `tsingyun-aiming-hw-cache` | **optional** | grader Docker image mirror (CN pull speed), vcpkg/uv caches, prebuilt acados artefacts | `private` | delete > 90 d | off | OSS-managed |
 
 Total expected bucket footprint: ~5–6 GB stored, ~250 GB lifetime egress (50 candidates × 5 GB initial pull). Drop `cache` if the team is happy pulling Docker images from `ghcr.io` directly. The other two buckets from the original 5-bucket plan (`submissions`, `replays`) are gone because they live in the local `out/` directory on the team box and never leave it (per resolved decision 3).
 
 ### Why OSS instead of Git LFS for the model blobs
 * GitHub's free LFS bandwidth quota is 1 GB/month — at 50 candidates × ~580 MB initial pull we'd hit a $25/month bandwidth-pack bill within the first day of launch.
-* Aliyun OSS lets us KMS-encrypt the opponent policies, which is a meaningful precaution: the gold policy is the entire point of HW7 and we don't want someone snapshotting it from `git clone` traffic.
+* Aliyun OSS encrypts the opponent policies at rest with SSE-OSS (free, OSS-managed keys, no separate KMS service required), which is a meaningful precaution: the gold policy is the entire point of HW7 and we don't want someone snapshotting it from `git clone` traffic.
 * The same `fetch_assets.py` resolver covers Godot binaries, datasets, and policies — one asset story, not two.
 * If LFS bandwidth ever stops mattering (smaller candidate cohort, cheaper account tier), we can flip a single config switch in `manifest.toml` to push `vis = "lfs"` instead of `vis = "oss-private"`.
 
@@ -793,8 +793,8 @@ Total expected bucket footprint: ~5–6 GB stored, ~250 GB lifetime egress (50 c
 (Originally posted in v0.1; answers from the team are now folded into the relevant sections above.)
 
 1. **Vendor or fork `godot_rl_agents`?** → **Vendor** at a pinned commit. Fork later only if upstream rejects a patch we need.
-2. **Where do model blobs live?** → **Private OSS bucket** (`tsingyun-aiming-hw-models`), KMS-encrypted, fetched by `shared/scripts/fetch_assets.py` against `shared/assets/manifest.toml`. Git LFS was considered and dropped (bandwidth pricing + no encryption story).
-3. **Self-hosted runner host.** → **Local GPU on the team box, manual.** No GH Actions self-hosted runner, no rented cloud GPU.
+2. **Where do model blobs live?** → **Private OSS bucket** (`tsingyun-aiming-hw-models`), encrypted at rest with SSE-OSS (server-side, OSS-managed keys; no Aliyun KMS subscription required), fetched by `shared/scripts/fetch_assets.py` against `shared/assets/manifest.toml`. Git LFS was considered and dropped (bandwidth pricing + no encryption story).
+3. **Self-hosted runner host.** → The student will run on their own CPUs or GPUs. No unified runner.
 4. **Timezone for nightly aggregator.** → **`Asia/Shanghai`** for any scheduled work. The aggregator is now manual (`make leaderboard`), but if a launchd/systemd timer is added later it sets `TZ=Asia/Shanghai` and the cron expression is documented as Shanghai-local.
 
 — end of plan —
