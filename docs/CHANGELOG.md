@@ -4,6 +4,63 @@ Conventional Commits + per-stage tags. This file tracks the reverse
 chronological view of what landed when, separately from the live
 implementation plan in `IMPLEMENTATION_PLAN.md`.
 
+## v1.3-hw7-strategy — Stage 9 (2026-04-29)
+
+Last active stage. HW7 strategy bonus — behaviour-tree DSL +
+4 leaf actions + optional PPO scaffold + DSL → C++ codegen.
+~1100 LOC across 3 headers + 3 sources + 2 GTests + 2 Python
+modules + bilingual README.
+
+* **HW7 directory:** `HW7_strategy/` — bilingual README, opt-in
+  `hw7` uv group (torch, tqdm; sample-factory is manual install
+  for the stretch goal), CMakeLists with no extra deps beyond
+  GTest.
+* **filled (C++):** `behavior_tree.hpp` — minimal Sequence /
+  Selector / Action runtime + typed Blackboard (variant-based,
+  string keys); factory functions `sequence/selector/action` so
+  the codegen emits readable C++.
+  `leaf_actions.{hpp,cpp}` — four leaves (engage, retreat_to_cover,
+  patrol, reload) reading from + writing to the Blackboard.
+* **two C++ TODO sites in `source/strategy.cpp`:**
+  * `pick_target` — highest-priority enemy track. Floor pinned by
+    tests: closest enemy wins at equal HP; allies skipped.
+  * `should_retreat` — switch from engage to retreat. Floors:
+    `self.hp <= 30` → retreat, `self.ammo <= 20` → retreat.
+* **Python (filled):**
+  `src/dsl_to_cpp.py` — YAML → C++ codegen. Reads
+  `configs/example_bt.yaml`, emits a `build_tree()` entry point.
+  Three node kinds (sequence, selector, action), six leaf names
+  (`engage`, `retreat_to_cover`, `patrol`, `reload`,
+  `should_retreat_check`, `engage_or_patrol`).
+  `src/train_ppo.py` — vanilla PPO scaffold (clipped objective,
+  GAE-Lambda, AdamW, single-process rollout) over a stub env that
+  emits canned observations. Candidate's first sub-skill task is
+  to swap the stub for a real gRPC env; stretch goal is plugging
+  in sample-factory's parallel rollouts.
+* **public tests:**
+  `hw7_priority_distance_test` — 4 cases on pick_target (empty,
+  all-ally, closest-equal-HP, ally-near + enemy-far).
+  `hw7_retreat_trigger_test` — 4 cases on should_retreat (full +
+  full → no retreat, low HP → retreat, low ammo → retreat,
+  exact-threshold → retreat).
+  Each detects unfilled TODOs and `GTEST_SKIP`s cleanly.
+* **manifest:** `gold-opponent-policy` row in the private models
+  bucket (placeholder digest until 3-day self-play training
+  completes).
+* **CMake:** root project bumped to **1.3.0**; HW7 wired in behind
+  the same EXISTS guard pattern.
+* **uv workspace:** registers `HW7_strategy` as a member.
+
+Out of scope: multi-agent communication beyond the simple ally-NPC
+channel, full game-theoretic equilibrium analysis, the gold policy
+training itself (team-side), hidden grading (deferred per Stage 10).
+
+**With this tag, HW1–HW7 are all landed.** Stage 10 (grading
+workflow + launch) remains deferred per the v0.4 schema decision.
+Once the team has reviewed the seven HWs end-to-end, write
+`design: grading workflow v1` against `schema.md` §7 and reopen
+Stage 10.
+
 ## v1.2-hw6-integration — Stage 8 (2026-04-29)
 
 Integration runner — the program that wires HW1 → HW3 → HW4 → HW5

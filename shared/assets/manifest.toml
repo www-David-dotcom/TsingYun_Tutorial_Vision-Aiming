@@ -128,5 +128,21 @@ visibility  = "private"
 local_path  = "out/assets/HW5/acados_solver_v1.1.tar.gz"
 description = "acados-codegened C library + headers for the HW5 MPC. Untar to HW5_mpc_gimbal/generated_solver/ before configuring the build. Placeholder digest until the team runs the codegen + push."
 
+# --- Stage 9 (v1.3-hw7-strategy) ---
+# Gold opponent policy. Trained via 3-day self-play (per
+# IMPLEMENTATION_PLAN.md Stage 9 plan) and uploaded by the team.
+# Candidates pull it via fetch_assets.py to play against the hardest
+# tier in HW7's 5-vs-gold acceptance episodes.
+
+[[asset]]
+name        = "gold-opponent-policy"
+bucket      = "tsingyun-aiming-hw-models"
+key         = "assets/policies/gold/1.3.0/policy.pt"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "private"
+local_path  = "out/assets/policies/gold.pt"
+description = "Frozen gold-tier opponent policy. The hardest of the three tiers — trained against silver via 3-day self-play. Used by HW7's 'best-of-5 vs gold' acceptance episode (deferred per Stage 10). Placeholder digest."
+
 # Add new entries below as later stages need them. Sort by name within each
 # visibility class to keep diffs reviewable.

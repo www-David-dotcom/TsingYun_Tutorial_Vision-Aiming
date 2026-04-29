@@ -39,6 +39,7 @@ members = [
     "HW1_armor_detector",
     "HW3_ekf_tracker",
     "HW5_mpc_gimbal",
+    "HW7_strategy",
 ]
 
 [tool.ruff]
