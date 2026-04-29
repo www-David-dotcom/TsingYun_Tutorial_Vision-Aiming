@@ -2,12 +2,14 @@
 build/
 install/
 log/
+bin/
 out/
 dist/
 *.o
 *.so
 *.dylib
 *.a
+*.tmp
 
 # Python / uv
 .venv/
@@ -36,6 +38,7 @@ compile_commands.json
 
 # Models / data (carry pointers, not blobs)
 *.pt
+*.pth
 *.onnx
 *.engine
 shared/opponents/*.pt
