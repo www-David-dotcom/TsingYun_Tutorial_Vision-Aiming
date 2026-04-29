@@ -46,17 +46,33 @@ void Watchdog::stop() {
 }
 
 void Watchdog::poll_loop() {
-    while (!stopped_.load(std::memory_order_acquire)) {
-        std::this_thread::sleep_for(tick_period_);
-        const int64_t now = now_ns();
-        const int64_t deadline = deadline_ns_.load(std::memory_order_acquire);
-        if (now >= deadline) {
-            const bool already = expired_.exchange(true, std::memory_order_acq_rel);
-            if (!already && on_expire_) {
-                on_expire_();
-            }
-        }
-    }
+    // TODO(HW6): the watchdog's polling thread.
+    //
+    // While stopped_ is false:
+    //   1. sleep for tick_period_.
+    //   2. compare now_ns() to the atomically-stored deadline_ns_.
+    //   3. if we're past the deadline, atomically flip expired_ from
+    //      false to true; on the FIRST transition (i.e. the call to
+    //      compare_exchange or atomic_exchange that actually flipped
+    //      it) invoke on_expire_(). Subsequent ticks while still past
+    //      the deadline must NOT re-fire — see the public test
+    //      `FiresOnceWhenStarved`.
+    //
+    // Concurrency notes:
+    //   * `pet()` resets both deadline_ns_ AND expired_, so a pet
+    //     after a fire allows the next starvation to re-fire. The
+    //     `RecoversAfterPet` test pins this.
+    //   * `stop()` is idempotent and joins this thread; the loop
+    //     condition above is the cancellation point. No locks here —
+    //     all state is in std::atomic.
+    //
+    // While this stub is in place, the watchdog never fires. Existing
+    // tests (`FiresOnceWhenStarved`, `RecoversAfterPet`) detect that
+    // and GTEST_SKIP via the new `poll_loop_is_stub` sentinel.
+
+    // Stub: the thread body just exits, so the watchdog instance
+    // sits inert until destruction.
+    return;
 }
 
 }  // namespace pipeline

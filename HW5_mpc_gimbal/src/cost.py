@@ -62,18 +62,30 @@ def stage_cost_expression(
     pitch_ref: ca.SX,
     weights: CostWeights,
 ) -> ca.SX:
-    """Quadratic stage cost as a scalar CasADi expression."""
-    e = ca.vertcat(
-        x[0] - yaw_ref,
-        x[1] - pitch_ref,
-        x[2],
-        x[3],
-        x[4],
-        x[5],
-    )
-    W_state = ca.diag(ca.SX(weights.state_diag))
-    W_control = ca.diag(ca.SX(weights.control_diag))
-    return e.T @ W_state @ e + u.T @ W_control @ u
+    """Quadratic stage cost as a scalar CasADi expression.
+
+    TODO(HW5): build the cost.
+
+        e = [yaw - yaw_ref, pitch - pitch_ref,
+             yaw_rate, pitch_rate, yaw_torque, pitch_torque]
+        W_state   = diag(weights.state_diag)            # 6x6
+        W_control = diag(weights.control_diag)          # 2x2
+        return  e.T @ W_state @ e   +   u.T @ W_control @ u
+
+    Hint: ``ca.vertcat`` for the error vector, ``ca.diag(ca.SX(list))``
+    for the diagonal weight matrices. The CasADi `@` operator is
+    matrix multiplication.
+
+    The acados codegen in `generate_acados.py` calls this once at
+    setup; if it returns 0, every shot landed in the cost is free
+    and the MPC has no incentive to track the reference. The
+    public `stage_cost_returns_quadratic` test detects the
+    zero-stub via the value at a known input.
+    """
+    # Stub: zero cost — every input/state combination is "free"
+    # under this stub, so the MPC has nothing to optimize against.
+    del x, u, yaw_ref, pitch_ref, weights
+    return ca.SX(0.0)
 
 
 def terminal_cost_expression(

@@ -92,11 +92,20 @@ public:
     void add(NodePtr child) { children_.push_back(std::move(child)); }
 
     Status tick(Blackboard& bb) override {
-        for (auto& c : children_) {
-            const Status s = c->tick(bb);
-            if (s != Status::Success) return s;
-        }
-        return Status::Success;
+        // TODO(HW7): implement Sequence semantics.
+        //
+        // Walk children_ left to right. tick each child; the FIRST
+        // child that returns:
+        //   * Failure   → return Failure (this branch is done).
+        //   * Running   → return Running (let the caller revisit).
+        // If every child returned Success, return Success.
+        //
+        // Three lines once you've thought about it.
+        // The stub returns Failure unconditionally so downstream
+        // tests detect the unfilled state via the
+        // `bt_tick_is_stub` sentinel.
+        (void)bb;
+        return Status::Failure;
     }
     std::string name() const override { return label_; }
 
@@ -115,10 +124,18 @@ public:
     void add(NodePtr child) { children_.push_back(std::move(child)); }
 
     Status tick(Blackboard& bb) override {
-        for (auto& c : children_) {
-            const Status s = c->tick(bb);
-            if (s != Status::Failure) return s;
-        }
+        // TODO(HW7): implement Selector (a.k.a. Fallback) semantics.
+        //
+        // Walk children_ left to right. tick each child; the FIRST
+        // child that returns:
+        //   * Success   → return Success (we found a working branch).
+        //   * Running   → return Running.
+        // If every child returned Failure, return Failure.
+        //
+        // Selector is the dual of Sequence — same loop, different
+        // short-circuit condition. Three lines. Stub returns
+        // Failure unconditionally.
+        (void)bb;
         return Status::Failure;
     }
     std::string name() const override { return label_; }
