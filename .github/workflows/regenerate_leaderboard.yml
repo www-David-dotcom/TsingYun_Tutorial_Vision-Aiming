@@ -1,0 +1,90 @@
+name: regenerate leaderboard
+
+# Per IMPLEMENTATION_PLAN.md Stage 10 v1 § "leaderboard cadence":
+# walk every open PR's most-recent validate_submission run, pull the
+# `submission_score.json` artefact, aggregate, and write the result
+# to a `leaderboard` orphan branch (so candidates don't see it
+# during the cycle).
+#
+# Schedule: minute 17 of the hour at 19:00 Beijing-local
+# (= 11:17 UTC), per the resolved decision 8 in
+# IMPLEMENTATION_PLAN.md "scheduled work in Asia/Shanghai".
+
+on:
+  schedule:
+    - cron: "17 11 * * *"   # 19:17 Beijing-local, daily
+  workflow_dispatch:
+
+permissions:
+  contents: write       # to push to the leaderboard branch
+  actions: read
+  pull-requests: read
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.30"
+
+      - name: uv sync
+        run: uv sync
+
+      - name: Aggregate per-PR scores
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          uv run python tools/leaderboard/aggregate.py \
+              --repo "${{ github.repository }}" \
+              --out-csv  /tmp/leaderboard.csv \
+              --out-md   /tmp/leaderboard.md \
+              --out-json /tmp/leaderboard.json
+
+      - name: Push to `leaderboard` branch
+        run: |
+          git config user.name  "tsingyun-bot"
+          git config user.email "tsingyun-bot@users.noreply.github.com"
+          # Orphan branch with only the leaderboard artefacts. We
+          # `git switch --orphan` if it doesn't exist, otherwise
+          # checkout and rewrite.
+          if git ls-remote --exit-code --heads origin leaderboard >/dev/null 2>&1; then
+              git fetch origin leaderboard
+              git switch leaderboard
+              git rm -rf . 2>/dev/null || true
+          else
+              git switch --orphan leaderboard
+              git rm -rf . 2>/dev/null || true
+          fi
+          mkdir -p leaderboard
+          cp /tmp/leaderboard.csv  leaderboard/leaderboard.csv
+          cp /tmp/leaderboard.md   leaderboard/leaderboard.md
+          cp /tmp/leaderboard.json leaderboard/leaderboard.json
+          # README that won't accidentally render as the repo's main
+          # readme if a viewer browses to this branch.
+          cat > README.md <<'EOF'
+          # leaderboard branch
+
+          This is the auto-generated grading leaderboard for the
+          TsingYun Vision Group recruitment cycle. Updated daily at
+          19:17 Beijing-local by `.github/workflows/regenerate_leaderboard.yml`.
+
+          See [`leaderboard.md`](leaderboard/leaderboard.md) for the
+          ranking and [`leaderboard.csv`](leaderboard/leaderboard.csv)
+          for the same data in spreadsheet form.
+
+          Anti-cheat posture: scores are derived from CI re-runs on
+          each PR's `head.sha`, not from the candidate's PR description.
+          See `IMPLEMENTATION_PLAN.md` Stage 10 v1.
+          EOF
+          git add -A
+          if git diff --staged --quiet; then
+              echo "no leaderboard delta — skipping push"
+              exit 0
+          fi
+          git commit -m "chore(leaderboard): regenerate $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push origin leaderboard

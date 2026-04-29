@@ -1,0 +1,140 @@
+name: validate submission
+
+# Per IMPLEMENTATION_PLAN.md Stage 10 v1 (Proposal A — auto-graded
+# public tests + honour system), this workflow runs on every PR to
+# the candidate-facing repo. It builds the project, runs every
+# public test that fits on `ubuntu-latest` (no acados, no ONNX
+# Runtime — those are HW1/HW5 stretch goals), aggregates the pass
+# count per HW, and posts a structured comment on the PR so the
+# candidate sees their public score.
+#
+# What this workflow does NOT do:
+#   * No hidden tests. Public tests only — HW1 → HW7 readme docs
+#     each list which behaviours the public tests pin.
+#   * No simulator-driven episode evaluation. Stage 2 arena binaries
+#     are out-of-band; the public tests don't need them.
+#   * No anti-cheat hash binding. Proposal A is honour-system; the
+#     CI re-runs every test on `pull_request.head.sha` so a candidate
+#     can't lie in their PR description.
+#
+# Cancellation: when the candidate pushes again, the in-progress run
+# is cancelled to keep CI minutes bounded.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "git ref to validate (defaults to main)"
+        required: false
+        default: "main"
+
+concurrency:
+  group: validate-submission-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write   # post the score comment
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout candidate's commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || inputs.ref || github.sha }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.30"
+
+      - name: Install C++ toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              cmake ninja-build g++-12 \
+              protobuf-compiler protobuf-compiler-grpc \
+              libprotobuf-dev libgrpc++-dev libabsl-dev \
+              libeigen3-dev libgtest-dev
+
+      - name: uv sync
+        run: uv sync
+
+      - name: ruff lint
+        run: uv run ruff check .
+        continue-on-error: true
+
+      - name: cmake configure
+        run: cmake --preset linux-debug
+
+      - name: cmake build
+        run: cmake --build --preset linux-debug
+
+      - name: Run C++ public tests
+        id: cpp_tests
+        run: |
+          set +e
+          ctest --preset linux-debug --output-junit ctest_results.xml --output-on-failure
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Run Python public tests
+        id: py_tests
+        run: |
+          set +e
+          uv run pytest --junit-xml=pytest_results.xml -v
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Score the submission
+        id: score
+        run: |
+          uv run python tools/leaderboard/score_pr.py \
+              --ctest-xml ctest_results.xml \
+              --pytest-xml pytest_results.xml \
+              --out submission_score.json \
+              --markdown submission_score.md
+
+      - name: Upload score artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: submission-score-${{ github.event.pull_request.number || github.run_id }}
+          path: |
+            submission_score.json
+            submission_score.md
+            ctest_results.xml
+            pytest_results.xml
+          retention-days: 30
+
+      - name: Post / update PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('submission_score.md', 'utf8');
+            const marker = '<!-- aiming-hw-grader -->';
+            const fullBody = `${marker}\n${body}`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+
+            const existing = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number, per_page: 100 },
+            );
+            const prior = existing.find(c => c.body && c.body.startsWith(marker));
+            if (prior) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: prior.id, body: fullBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number, body: fullBody,
+              });
+            }
