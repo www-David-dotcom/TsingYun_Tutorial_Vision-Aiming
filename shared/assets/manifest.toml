@@ -1,0 +1,37 @@
+# Asset manifest for the recruitment assignment.
+#
+# Every entry below is one downloadable blob. The candidate's machine, the
+# team's workstation, and any future grading host all read this file as
+# the canonical source of "what files do I need." Storage is OSS, accessed
+# via shared/scripts/fetch_assets.py.
+#
+# Rules:
+#   - sha256 is mandatory. fetch_assets refuses to use an asset whose
+#     digest doesn't match.
+#   - visibility = "anonymous"  → public bucket, no creds needed
+#     visibility = "private"    → private bucket, OSS_ACCESS_KEY_ID and
+#                                 OSS_ACCESS_KEY_SECRET env vars required
+#   - local_path is relative to the repo root. The file is written to
+#     out/assets/<local_path> and a sentinel symlink is placed at the
+#     literal local_path so HW READMEs can reference a stable filesystem
+#     location.
+#
+# Stage 1 ships an empty manifest plus one sentinel-public asset for smoke
+# testing the fetcher. Stage 2+ append real entries (Godot binaries, HW1
+# datasets, opponent policies).
+
+oss_endpoint = "oss-cn-beijing.aliyuncs.com"
+oss_region   = "cn-beijing"
+
+[[asset]]
+name        = "sentinel-public"
+bucket      = "tsingyun-aiming-hw-public"
+key         = "sentinels/v0.5.0/hello-public.txt"
+sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
+size        = 0
+visibility  = "anonymous"
+local_path  = "out/assets/sentinels/hello-public.txt"
+description = "1-byte file that fetch_assets.py uses to verify anonymous read on the public bucket. The sha256 above is a placeholder; populate it after the team uploads the real sentinel."
+
+# Add new entries below as later stages need them. Sort by name within each
+# visibility class to keep diffs reviewable.
