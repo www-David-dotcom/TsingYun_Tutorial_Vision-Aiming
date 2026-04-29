@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Iterator
 from concurrent import futures
 from dataclasses import dataclass
-from typing import Iterator
 
 import grpc
 

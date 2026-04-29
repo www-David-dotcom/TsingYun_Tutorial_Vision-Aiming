@@ -20,7 +20,6 @@ from dataclasses import dataclass
 import numpy as np
 import zmq
 
-
 HEADER_FMT = "<QQ"
 HEADER_SIZE = struct.calcsize(HEADER_FMT)
 

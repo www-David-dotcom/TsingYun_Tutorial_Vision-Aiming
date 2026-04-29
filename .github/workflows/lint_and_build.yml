@@ -1,0 +1,47 @@
+name: lint and build smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Per IMPLEMENTATION_PLAN resolved decisions, GitHub-hosted runners run
+# only NON-grading work: lint, build smoke, JSON-schema checks. Grading
+# episodes (with simulator + frozen RL bots) never run here.
+
+jobs:
+  python-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.30"
+      - name: uv sync
+        run: uv sync
+      - name: ruff
+        run: uv run ruff check .
+      - name: pytest (no-minio)
+        # The fetch_assets minio test auto-skips when minio is missing,
+        # which is exactly what we want here. The other tests in
+        # tests/test_fetch_assets.py do run.
+        run: uv run pytest tests/test_fetch_assets.py -v
+
+  cpp-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+              cmake ninja-build g++-12 \
+              protobuf-compiler protobuf-compiler-grpc \
+              libprotobuf-dev libgrpc++-dev libabsl-dev \
+              libeigen3-dev
+      - name: configure
+        run: cmake --preset linux-debug
+      - name: build
+        run: cmake --build --preset linux-debug
+      - name: test
+        run: ctest --preset linux-debug

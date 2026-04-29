@@ -10,7 +10,7 @@ Once Stage 2 ships the Godot arena, this stub remains useful for CI smoke
 tests where firing up a full headless game would be overkill.
 """
 
-from .server import build_server, AimingArenaStub
+from .server import AimingArenaStub, build_server
 
-__all__ = ["build_server", "AimingArenaStub"]
+__all__ = ["AimingArenaStub", "build_server"]
 __version__ = "0.5.0"

@@ -11,12 +11,11 @@ Generated code lands under shared/grpc_stub_server/src/grpc_stub_server/_generat
 
 from __future__ import annotations
 
-import sys
-import subprocess
 import importlib
+import subprocess
+import sys
 from pathlib import Path
 from types import ModuleType
-
 
 _PROTO_FILES = ["aiming.proto", "sensor.proto", "episode.proto"]
 
