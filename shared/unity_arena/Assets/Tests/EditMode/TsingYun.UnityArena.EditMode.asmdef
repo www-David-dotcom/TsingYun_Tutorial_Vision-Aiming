@@ -1,0 +1,20 @@
+{
+    "name": "TsingYun.UnityArena.EditMode",
+    "rootNamespace": "TsingYun.UnityArena.Tests.EditMode",
+    "references": [
+        "TsingYun.UnityArena",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
+}
