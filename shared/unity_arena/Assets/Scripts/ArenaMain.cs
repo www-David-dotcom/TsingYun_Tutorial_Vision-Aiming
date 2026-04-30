@@ -48,6 +48,12 @@ namespace TsingYun.UnityArena
 
         private void Awake()
         {
+            // Editor Play mode otherwise pauses Update when the window loses
+            // focus; the Python smoke harness drives the arena from Terminal,
+            // so without this the dispatch queue never drains and every TCP
+            // request times out.
+            Application.runInBackground = true;
+
             BlueChassis.Team = "blue";
             BlueChassis.ChassisId = 0;
             RedChassis.Team = "red";
@@ -99,7 +105,9 @@ namespace TsingYun.UnityArena
         {
             object response = null;
             Exception caught = null;
-            using var done = new ManualResetEventSlim(false);
+            // No `using`: if Wait times out, the action may still be queued and
+            // would throw ObjectDisposedException on done.Set(). Let GC reclaim.
+            var done = new ManualResetEventSlim(false);
             _mainThreadQueue.Enqueue(() =>
             {
                 try
@@ -114,12 +122,18 @@ namespace TsingYun.UnityArena
                     }
                 }
                 catch (Exception ex) { caught = ex; }
-                finally { done.Set(); }
+                finally { try { done.Set(); } catch (ObjectDisposedException) { /* outer Dispatch already returned */ } }
             });
             if (!done.Wait(5000))
+            {
+                Debug.LogWarning($"[ArenaMain] dispatch timed out (5s) for method={method} — Application.runInBackground={Application.runInBackground}");
                 return new Dictionary<string, object> { { "_error", $"dispatch timed out (5s) for method={method}" } };
+            }
             if (caught != null)
+            {
+                Debug.LogWarning($"[ArenaMain] dispatch caught exception in {method}: {caught}");
                 return new Dictionary<string, object> { { "_error", caught.Message } };
+            }
             return response;
         }
 
