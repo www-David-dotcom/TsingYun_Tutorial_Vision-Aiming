@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Migrate `shared/godot_arena/` from Godot 4 to a new `shared/unity_arena/` running Unity 2023 LTS + HDRP. Preserve the proto wire contract and gameplay 1:1 so HW1–HW7 candidate stacks remain valid. Coordinate the migration with a high-fidelity visual reform (multi-tier maze hybrid map, stylized chassis, DXR + rasterizer fallback, team-identity palette, full immersive HUD).
+**Goal:** Migrate `shared/godot_arena/` from Godot 4 to a new `shared/unity_arena/` running Unity 6 LTS + HDRP. Preserve the proto wire contract and gameplay 1:1 so HW1–HW7 candidate stacks remain valid. Coordinate the migration with a high-fidelity visual reform (multi-tier maze hybrid map, stylized chassis, DXR + rasterizer fallback, team-identity palette, full immersive HUD).
 
 **Architecture:** Stage 12 runs as four sequential sub-stages on a single branch `stage12/unity-reform`, each ending with an annotated tag. 12a builds the Unity scaffold + wire-contract parity. 12b lands Map A geometry + chassis/gimbal/projectile parity. 12c is the art/lighting/VFX/UI pass. 12d cuts release builds, runs the Tier-5 ship gate, and publishes to OSS. Five layered conformance tiers (wire-format → smoke parity → golden frames → bronze opponent KS test → HW1–HW7 contract) gate each sub-stage tag. The Godot project is kept side-by-side as `godot_arena_legacy/` after 12d for GPU-less fallback.
 
-**Tech Stack:** Unity 2023 LTS, HDRP (High Definition Render Pipeline), C# 9, Unity Test Framework (NUnit), Shader Graph, VFX Graph, ProBuilder, Synty POLYGON Sci-Fi pack, Python 3.11 (test harness, smoke), pytest, protobuf json_format. Existing toolchain (`uv`, CMake, `vcpkg`, Aliyun OSS in `cn-beijing`) is unchanged.
+**Tech Stack:** Unity 6 LTS, HDRP (High Definition Render Pipeline), C# 9, Unity Test Framework (NUnit), Shader Graph, VFX Graph, ProBuilder, Synty POLYGON Sci-Fi pack, Python 3.11 (test harness, smoke), pytest, protobuf json_format. Existing toolchain (`uv`, CMake, `vcpkg`, Aliyun OSS in `cn-beijing`) is unchanged.
 
 **Spec reference:** `docs/superpowers/specs/2026-04-30-arena-art-vision-reform-design.md` (commit `0848e61`).
 
@@ -159,13 +159,13 @@ git checkout -b stage12/unity-reform
 git commit --allow-empty -m "chore(stage12): branch open"
 ```
 
-- [ ] **Step 3: Verify Unity 2023 LTS is installed**
+- [ ] **Step 3: Verify Unity 6 LTS is installed**
 
-Open Unity Hub. If Unity 2023.2 LTS or later is not installed, install it:
-- Unity Hub → Installs → Install Editor → Unity 2023.2.20f1 (LTS) or newer 2023 LTS.
+Open Unity Hub. If Unity 6 LTS or later is not installed, install it:
+- Unity Hub → Installs → Install Editor → Unity 6000.3.14f1 (LTS) or newer Unity 6 LTS.
 - Required modules: Documentation, Mac Build Support (IL2CPP), Windows Build Support (Mono), Linux Build Support (IL2CPP).
 
-Expected: `Unity 2023.2.x` shown in Unity Hub.
+Expected: `Unity 6000.3.x` (or newer Unity 6 LTS) shown in Unity Hub.
 
 - [ ] **Step 4: Verify Synty pack license**
 
@@ -175,7 +175,7 @@ If the maintainer has not yet purchased Synty POLYGON Sci-Fi: buy from synty.com
 
 ## Stage 12a — Unity scaffold + wire parity
 
-**Goal:** Stand up a working Unity 2023 LTS HDRP project at `shared/unity_arena/` whose 10 C# scripts mirror the existing GDScript files, whose TCP control + frame ports match the Godot wire byte-for-byte, and whose placeholder ArenaMain scene passes Tier 1 (wire-format conformance) and Tier 2 (smoke harness parity) regressions. End tag: `v1.6-unity-scaffold`.
+**Goal:** Stand up a working Unity 6 LTS HDRP project at `shared/unity_arena/` whose 10 C# scripts mirror the existing GDScript files, whose TCP control + frame ports match the Godot wire byte-for-byte, and whose placeholder ArenaMain scene passes Tier 1 (wire-format conformance) and Tier 2 (smoke harness parity) regressions. End tag: `v1.6-unity-scaffold`.
 
 **Calendar estimate:** 5 working days (1 engineer).
 
@@ -198,11 +198,12 @@ Expected: directory `shared/unity_arena/` exists with `Assets/`, `Packages/`, `P
 - [ ] **Step 2: Verify HDRP package version**
 
 In Unity: Window → Package Manager → Packages: In Project. Confirm:
-- `com.unity.render-pipelines.high-definition` ≥ 14.0
-- `com.unity.test-framework` ≥ 1.3
-- `com.unity.inputsystem` ≥ 1.7
-- `com.unity.visualeffectgraph` ≥ 14.0
-- `com.unity.shadergraph` ≥ 14.0
+- `com.unity.render-pipelines.high-definition` ≥ 17.0 (Unity 6 HDRP)
+- `com.unity.test-framework` ≥ 1.4
+- `com.unity.inputsystem` ≥ 1.11
+- `com.unity.visualeffectgraph` ≥ 17.0
+- `com.unity.shadergraph` ≥ 17.0 (typically pulled transitively by HDRP)
+- `com.unity.probuilder` (any 5.x; needed for Stage 12b Map A geometry)
 
 If any are missing, install via Package Manager.
 
@@ -2869,10 +2870,10 @@ Maintainer-facing how-to-open / how-to-build doc. Mirrors `shared/godot_arena/RE
 Create `shared/unity_arena/README.md`:
 
 ````markdown
-# Aiming Arena — Unity 2023 LTS HDRP project
+# Aiming Arena — Unity 6 LTS HDRP project
 
 Stage 12 reform of `shared/godot_arena/`. Implements the simulator side
-of the contract from `shared/proto/aiming.proto` on Unity 2023 LTS +
+of the contract from `shared/proto/aiming.proto` on Unity 6 LTS +
 HDRP, with a coordinated visual reform (multi-tier maze hybrid map,
 stylized chassis, neon palette, holographic UI). Companion to the
 spec at [`docs/superpowers/specs/2026-04-30-arena-art-vision-reform-design.md`](../../docs/superpowers/specs/2026-04-30-arena-art-vision-reform-design.md).
@@ -2880,7 +2881,7 @@ spec at [`docs/superpowers/specs/2026-04-30-arena-art-vision-reform-design.md`](
 ## Quickstart (team)
 
 ```bash
-# 1. Install Unity 2023.2 LTS (or newer 2023 LTS) via Unity Hub.
+# 1. Install Unity 6 LTS via Unity Hub (project pinned at 6000.3.14f1).
 # 2. Open the project from Unity Hub: Open → /Volumes/...../shared/unity_arena
 # 3. Open Assets/Scenes/ArenaMain.unity and click Play.
 # 4. In another terminal, drive the smoke:
@@ -5042,7 +5043,7 @@ set -euo pipefail
 TARGET="${1:-}"
 if [ "$TARGET" = "--target" ]; then TARGET="${2:-}"; fi
 PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/shared/unity_arena"
-UNITY_BIN="${UNITY_BIN:-/Applications/Unity/Hub/Editor/2023.2.20f1/Unity.app/Contents/MacOS/Unity}"
+UNITY_BIN="${UNITY_BIN:-/Applications/Unity/Hub/Editor/6000.3.14f1/Unity.app/Contents/MacOS/Unity}"
 
 if [ ! -x "$UNITY_BIN" ]; then
     echo "Unity binary not found at $UNITY_BIN. Set UNITY_BIN env var." >&2
@@ -5113,7 +5114,7 @@ set -euo pipefail
 
 CONFIG="${1:-test}"
 PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/shared/unity_arena"
-UNITY_BIN="${UNITY_BIN:-/Applications/Unity/Hub/Editor/2023.2.20f1/Unity.app/Contents/MacOS/Unity}"
+UNITY_BIN="${UNITY_BIN:-/Applications/Unity/Hub/Editor/6000.3.14f1/Unity.app/Contents/MacOS/Unity}"
 
 case "$CONFIG" in
     test)    METHOD="TsingYun.UnityArena.Editor.BakeScript.BakeTest" ;;
@@ -5463,7 +5464,7 @@ Prepend to `docs/CHANGELOG.md`:
 ```markdown
 ## v2.0-arena-reform-complete · 2026-MM-DD
 
-Stage 12 closed. The Aiming Arena is now Unity 2023 LTS HDRP at
+Stage 12 closed. The Aiming Arena is now Unity 6 LTS HDRP at
 `shared/unity_arena/`; the Godot project is preserved as
 `shared/godot_arena_legacy/` for GPU-less fallback. Tier 1-5 conformance
 all green.
@@ -5519,7 +5520,7 @@ After the existing Stage 11 closure entry, append:
 * **Calendar estimate**: ~4 weeks (1 engineer + part-time art owner)
 
 ### Goals
-1. Migrate `shared/godot_arena/` to `shared/unity_arena/` (Unity 2023 LTS + HDRP).
+1. Migrate `shared/godot_arena/` to `shared/unity_arena/` (Unity 6 LTS + HDRP).
 2. Preserve proto wire contract and gameplay 1:1; HW1-HW7 contract regression is the ship gate.
 3. Land high-fidelity sci-fi visual reform: Map A multi-tier maze hybrid, stylized chassis,
    DXR + rasterizer fallback, team-identity palette, full immersive HUD.
@@ -5580,7 +5581,7 @@ IMPLEMENTATION_PLAN.md Stage 12 section appended."
 git commit --allow-empty -m "chore(stage12): close stage"
 git tag -a v2.0-arena-reform-complete -m "Stage 12 — Arena Art & Vision Reform complete
 
-Aiming Arena migrated from Godot 4 to Unity 2023 LTS HDRP. Wire contract and
+Aiming Arena migrated from Godot 4 to Unity 6 LTS HDRP. Wire contract and
 gameplay preserved 1:1; HW1-HW7 candidate stacks unaffected. Visual reform:
 multi-tier maze hybrid (Map A), stylized chassis, DXR ray tracing on showcase /
 rasterizer fallback for headless and lower-end, team-identity-first palette,

@@ -1,18 +1,18 @@
 # Arena Art & Vision Reform — Design Spec
 
-> Design version 1.0 — 2026-04-30. Authored against `Aiming_HW` `v1.5-more-todos`. Proposes **Stage 12** of `IMPLEMENTATION_PLAN.md`: a Godot 4 → Unity 2023 LTS HDRP migration of the Aiming Arena, with a coordinated visual reform to land the high-fidelity sci-fi look from the project brief.
+> Design version 1.0 — 2026-04-30. Authored against `Aiming_HW` `v1.5-more-todos`. Proposes **Stage 12** of `IMPLEMENTATION_PLAN.md`: a Godot 4 → Unity 6 LTS HDRP migration of the Aiming Arena, with a coordinated visual reform to land the high-fidelity sci-fi look from the project brief.
 
 ---
 
 ## 0. TL;DR
 
-Migrate `shared/godot_arena/` from Godot 4 to **Unity 2023 LTS + HDRP** as `shared/unity_arena/`, preserving the proto wire contract and gameplay 1:1 so candidate HW1–HW7 stacks continue to work without modification. Coordinate the migration with a visual reform that delivers the brief's high-fidelity sci-fi aesthetic: a multi-tier maze hybrid map (Map A), stylized-but-compatible chassis surface treatment, DXR ray tracing on the showcase build with screen-space rasterizer fallback for headless and lower-end hardware, team-identity-first palette, full immersive HUD with a build-time toggle separating diegetic and screen-space layers, Synty POLYGON Sci-Fi as the kit-bash base, 60 fps hard floor on RTX 3060 / M2 Pro. Single hero map (Map A) for v1; B and C deferred. Stage 12 is four sub-stages over ~4 calendar weeks; OSS publishing is the final sub-stage only.
+Migrate `shared/godot_arena/` from Godot 4 to **Unity 6 LTS + HDRP** as `shared/unity_arena/`, preserving the proto wire contract and gameplay 1:1 so candidate HW1–HW7 stacks continue to work without modification. Coordinate the migration with a visual reform that delivers the brief's high-fidelity sci-fi aesthetic: a multi-tier maze hybrid map (Map A), stylized-but-compatible chassis surface treatment, DXR ray tracing on the showcase build with screen-space rasterizer fallback for headless and lower-end hardware, team-identity-first palette, full immersive HUD with a build-time toggle separating diegetic and screen-space layers, Synty POLYGON Sci-Fi as the kit-bash base, 60 fps hard floor on RTX 3060 / M2 Pro. Single hero map (Map A) for v1; B and C deferred. Stage 12 is four sub-stages over ~4 calendar weeks; OSS publishing is the final sub-stage only.
 
 ## 1. Decision log
 
 | # | Decision | Choice |
 |---|---|---|
-| 1 | Engine | Unity 2023 LTS + HDRP, port from Godot 4, gameplay preserved 1:1 |
+| 1 | Engine | Unity 6 LTS + HDRP, port from Godot 4, gameplay preserved 1:1 |
 | 2 | Map shape | Multi-tier maze hybrid; 20 × 20 m × 7 m bounded arena |
 | 3 | Chassis aesthetic | Stylized but compatible — silhouette envelope and armor-plate locations bit-identical, surface fully reworked |
 | 4 | Render target | DXR showcase + rasterizer fallback for headless and lower-end |
@@ -33,7 +33,7 @@ The recruitment-cycle assignment is fully built out (HW1–HW7 closed, grading w
 
 ### 3.1 Goals
 
-1. Replace `shared/godot_arena/` with `shared/unity_arena/` running on Unity 2023 LTS + HDRP.
+1. Replace `shared/godot_arena/` with `shared/unity_arena/` running on Unity 6 LTS + HDRP.
 2. Preserve the proto3 wire contract (TCP control on port 7654, RGB888 frame stream on port 7655) byte-for-byte, including JSON envelope shape, length-prefixing, header layout, and field naming.
 3. Preserve gameplay 1:1: chassis kinematics, gimbal first-order lag, projectile physics with quadratic drag, four-armor-plate collision damage, episode determinism per seed.
 4. Land the brief's visual targets: cyberpunk industrial maze, PBR materials, volumetric lighting, neon edge strips, holographic UI, post-FX, particles.
@@ -292,7 +292,7 @@ Project is at `v1.5-more-todos` (Stage 11 closed). Reform = Stage 12 on a single
 
 **Created:**
 
-- `shared/unity_arena/` — full Unity 2023 LTS HDRP project (~50 source files: 10 C# scripts, ~20 prefabs, ~15 materials, 4 shader graphs, 3 VFX assets, 2 HDRPAsset variants, 1 lightmap bake)
+- `shared/unity_arena/` — full Unity 6 LTS HDRP project (~50 source files: 10 C# scripts, ~20 prefabs, ~15 materials, 4 shader graphs, 3 VFX assets, 2 HDRPAsset variants, 1 lightmap bake)
 - `tools/unity/build.sh`, `tools/unity/bake_lighting.sh`, `tools/unity/README.md`
 - `tools/scripts/check_synty_redistribution.py` — CI guard (R2 mitigation)
 - `tests/golden_frames/<seed>_<pose>.png` × 25 — Tier 3 reference frames
