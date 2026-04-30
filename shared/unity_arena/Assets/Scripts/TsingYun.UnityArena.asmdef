@@ -3,7 +3,8 @@
     "rootNamespace": "TsingYun.UnityArena",
     "references": [
         "Unity.RenderPipelines.HighDefinition.Runtime",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
