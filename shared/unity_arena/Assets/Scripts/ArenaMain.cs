@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 
 namespace TsingYun.UnityArena
@@ -37,6 +40,12 @@ namespace TsingYun.UnityArena
         private int _armorHits;
         private int _damageDealt;
 
+        // TcpProtoServer dispatches on its accept/client thread; EnvReset / Step /
+        // PushFire / Finish all touch Unity transform/component APIs which are
+        // main-thread-only. Network-thread requests get queued here and pumped
+        // off the queue by Update().
+        private readonly ConcurrentQueue<Action> _mainThreadQueue = new ConcurrentQueue<Action>();
+
         private void Awake()
         {
             BlueChassis.Team = "blue";
@@ -72,16 +81,46 @@ namespace TsingYun.UnityArena
             _replay?.Close();
         }
 
+        private void Update()
+        {
+            while (_mainThreadQueue.TryDequeue(out var action))
+            {
+                try { action(); }
+                catch (Exception ex) { Debug.LogException(ex); }
+            }
+        }
+
+        // Called by TcpProtoServer from its accept/client thread. Marshals onto
+        // the main thread (Update) so the env_* handlers can safely touch
+        // transforms and components, then blocks here until the handler signals
+        // completion. A 5 s timeout guards against the queue not draining
+        // (scene tearing down, Unity paused, etc).
         private object Dispatch(string method, Dictionary<string, object> request)
         {
-            switch (method)
+            object response = null;
+            Exception caught = null;
+            using var done = new ManualResetEventSlim(false);
+            _mainThreadQueue.Enqueue(() =>
             {
-                case "env_reset": return EnvReset(request);
-                case "env_step": return EnvStep(request);
-                case "env_push_fire": return EnvPushFire(request);
-                case "env_finish": return EnvFinish(request);
-                default: return new Dictionary<string, object> { { "_error", $"unknown method: {method}" } };
-            }
+                try
+                {
+                    switch (method)
+                    {
+                        case "env_reset":     response = EnvReset(request); break;
+                        case "env_step":      response = EnvStep(request); break;
+                        case "env_push_fire": response = EnvPushFire(request); break;
+                        case "env_finish":    response = EnvFinish(request); break;
+                        default:              response = new Dictionary<string, object> { { "_error", $"unknown method: {method}" } }; break;
+                    }
+                }
+                catch (Exception ex) { caught = ex; }
+                finally { done.Set(); }
+            });
+            if (!done.Wait(5000))
+                return new Dictionary<string, object> { { "_error", $"dispatch timed out (5s) for method={method}" } };
+            if (caught != null)
+                return new Dictionary<string, object> { { "_error", caught.Message } };
+            return response;
         }
 
         public Dictionary<string, object> EnvReset(Dictionary<string, object> request)
