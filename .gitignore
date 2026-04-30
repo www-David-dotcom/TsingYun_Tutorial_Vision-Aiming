@@ -67,6 +67,26 @@ htmlcov/
 # Superpowers brainstorming workspace (visual companion mockups, transient state)
 .superpowers/
 
+# Unity (project at shared/unity_arena/). Library/, Temp/, Logs/, UserSettings/
+# and MemoryCaptures/ are editor-local caches; *.csproj / *.sln are regenerated
+# by Unity on every refresh. Lightmap bake output is gitignored; the bake is
+# rerun by tools/unity/bake_lighting.sh.
+shared/unity_arena/Library/
+shared/unity_arena/Temp/
+shared/unity_arena/Logs/
+shared/unity_arena/Build/
+shared/unity_arena/builds/
+shared/unity_arena/UserSettings/
+shared/unity_arena/MemoryCaptures/
+shared/unity_arena/*.csproj
+shared/unity_arena/*.sln
+shared/unity_arena/*.userprefs
+shared/unity_arena/Assets/Lightmaps/
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+
 # Synty POLYGON paid asset pack — source redistribution forbidden by license.
 # Maintainer fetches manually before building; CI guard in
 # tools/scripts/check_synty_redistribution.py enforces this.
