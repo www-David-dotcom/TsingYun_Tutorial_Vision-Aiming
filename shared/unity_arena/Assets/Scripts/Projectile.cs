@@ -23,4 +23,20 @@ namespace TsingYun.UnityArena
             return -velocity.normalized * magnitude;
         }
     }
+
+    // Stage 12a stub. Full implementation (Rigidbody integration, quadratic
+    // drag in FixedUpdate, lifetime caps, friendly-fire check) lands in
+    // Stage 12b Task 11.
+    public class Projectile : MonoBehaviour
+    {
+        public string Team = "blue";
+        public bool Consumed = false;
+
+        public int OnArmorHit(ArmorPlate plate) => 0;
+
+        public void Arm(Vector3 initialVelocity, string owningTeam)
+        {
+            Team = owningTeam;
+        }
+    }
 }
