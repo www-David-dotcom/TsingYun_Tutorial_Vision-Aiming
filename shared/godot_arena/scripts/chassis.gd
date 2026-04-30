@@ -18,6 +18,9 @@ signal armor_hit(plate_id: String, damage: int, source_id: int)
 # 7=Sentry. One number per robot — every plate of this chassis displays
 # the same number sticker (an MNIST sample of `chassis_number`).
 @export var chassis_number: int = 3
+# Per-robot HP pool. All four plates feed damage into this; the plates
+# themselves carry no HP.
+@export var max_hp: int = 200
 @export_range(0.0, 4.0) var max_linear_speed: float = 3.5    # m/s
 @export_range(0.0, 8.0) var max_angular_speed: float = 4.0   # rad/s
 
@@ -26,11 +29,13 @@ var cmd_vx: float = 0.0
 var cmd_vy: float = 0.0
 var cmd_omega: float = 0.0
 var damage_taken: int = 0
+var hp: int = 0
 
 
 func _ready() -> void:
     _assign_armor_metadata()
     chassis_yaw = rotation.y
+    hp = max_hp
 
 
 func _assign_armor_metadata() -> void:
@@ -86,8 +91,10 @@ func reset_for_new_episode(spawn_position: Vector3, spawn_yaw: float) -> void:
     cmd_vy = 0.0
     cmd_omega = 0.0
     damage_taken = 0
+    hp = max_hp
     for child in [$ArmorPlateFront, $ArmorPlateBack, $ArmorPlateLeft, $ArmorPlateRight]:
         child.reset_for_new_episode()
+        child.refresh_glow(1.0)
     var loader: Node = get_node_or_null("StickerLoader")
     if loader != null:
         loader.load_sticker_for_current_number()
@@ -110,6 +117,12 @@ func gimbal_state() -> Dictionary:
 
 func _on_plate_hit(damage: int, source_id: int, face: String) -> void:
     damage_taken += damage
+    hp = max(0, hp - damage)
+    var t: float = float(hp) / float(max_hp) if max_hp > 0 else 0.0
+    for plate_name in ["ArmorPlateFront", "ArmorPlateBack", "ArmorPlateLeft", "ArmorPlateRight"]:
+        var plate: Node = get_node_or_null(plate_name)
+        if plate != null and plate.has_method("refresh_glow"):
+            plate.refresh_glow(t)
     armor_hit.emit("%s.%s" % [team, face], damage, source_id)
 
 

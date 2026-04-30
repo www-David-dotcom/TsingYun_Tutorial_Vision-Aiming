@@ -4,6 +4,22 @@ using UnityEngine;
 
 namespace TsingYun.UnityArena
 {
+    // Pure-C# state container for the chassis HP pool. One pool per
+    // robot: damage from any of the four armor plates accumulates here,
+    // mirroring real RM ("hits on different plates of the same robot all
+    // deduct from the same robot HP"). Extracted so EditMode tests can
+    // exercise the clamp-at-zero / reset behavior without spinning up a
+    // scene.
+    public class ChassisHpState
+    {
+        public int MaxHp = 200;
+        public int Hp;
+
+        public void Reset() { Hp = MaxHp; }
+        public void ApplyDamage(int amount) { Hp = Mathf.Max(0, Hp - amount); }
+        public bool IsDestroyed => Hp <= 0;
+    }
+
     // Mecanum chassis with a custom velocity solver (NOT Rigidbody-driven).
     // Movement is via CharacterController.Move so PhysX integration drift
     // cannot creep into chassis kinematics over a 90-second episode (R3
@@ -17,10 +33,15 @@ namespace TsingYun.UnityArena
         // One per robot — every plate of this chassis displays the same
         // number sticker (an MNIST sample of `Number`).
         public int Number = 3;
+        // Per-robot HP pool. All four plates feed damage into this; the
+        // plates themselves carry no HP.
+        public int MaxHp = 200;
         [Range(0f, 4f)] public float MaxLinearSpeed = 3.5f;
         [Range(0f, 8f)] public float MaxAngularSpeed = 4.0f;
 
         public int DamageTaken { get; private set; }
+        public int Hp => _hp.Hp;
+        public bool IsDestroyed => _hp.IsDestroyed;
         public Gimbal Gimbal { get; private set; }
         public Vector3 LinearVelocity { get; private set; }
         public float ChassisYaw => _solver?.ChassisYaw ?? 0f;
@@ -31,6 +52,7 @@ namespace TsingYun.UnityArena
         private CharacterController _controller;
         private ArmorPlate[] _plates;
         private StickerLoader _stickerLoader;
+        private ChassisHpState _hp;
 
         private void Awake()
         {
@@ -42,6 +64,8 @@ namespace TsingYun.UnityArena
             };
             Gimbal = GetComponentInChildren<Gimbal>();
             _stickerLoader = GetComponent<StickerLoader>();
+            _hp = new ChassisHpState { MaxHp = MaxHp };
+            _hp.Reset();
             AssignArmorMetadata();
         }
 
@@ -87,8 +111,17 @@ namespace TsingYun.UnityArena
             _controller.enabled = true;
             _solver.Reset(spawnYaw);
             DamageTaken = 0;
+            _hp.MaxHp = MaxHp;
+            _hp.Reset();
             LinearVelocity = Vector3.zero;
-            if (_plates != null) foreach (var p in _plates) p.ResetForNewEpisode();
+            if (_plates != null)
+            {
+                foreach (var p in _plates)
+                {
+                    p.ResetForNewEpisode();
+                    p.RefreshGlow(1f);
+                }
+            }
             if (_stickerLoader != null) _stickerLoader.LoadStickerForCurrentNumber();
         }
 
@@ -122,7 +155,16 @@ namespace TsingYun.UnityArena
         }
 
         protected void RaiseArmorHit(string plateId, int damage, int sourceId)
-            => ArmorHit?.Invoke($"{Team}.{plateId.Split('.')[1]}", damage, sourceId);
+        {
+            DamageTaken += damage;
+            _hp.ApplyDamage(damage);
+            float t = _hp.MaxHp > 0 ? (float)_hp.Hp / _hp.MaxHp : 0f;
+            if (_plates != null)
+            {
+                foreach (var p in _plates) p.RefreshGlow(t);
+            }
+            ArmorHit?.Invoke($"{Team}.{plateId.Split('.')[1]}", damage, sourceId);
+        }
 
         private static Dictionary<string, object> Vec3Dict(Vector3 v) => new Dictionary<string, object>
         {
