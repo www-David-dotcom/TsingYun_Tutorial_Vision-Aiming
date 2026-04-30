@@ -3,17 +3,18 @@ extends Area3D
 # overlaps via Godot's Area3D `area_entered` signal, applies damage, and
 # bubbles up to the parent chassis through the `plate_hit` signal.
 #
-# The `team` and `face` properties are filled in by the chassis at
-# spawn-time (see chassis.gd:_assign_armor_metadata). `icon` mirrors
-# RoboMaster's armor classification (Hero / Engineer / Standard / Sentry)
-# — Stage 2 doesn't render the icon yet; the field exists so HW1's
-# detector training can use it as a label.
+# The `team`, `face`, and `number` properties are filled in by the
+# chassis at spawn-time (see chassis.gd:_assign_armor_metadata). `number`
+# is the RoboMaster numeric tag (1=Hero, 2=Engineer, 3/4/5=Standard,
+# 7=Sentry) — one per robot, identical on all 4 plates of that robot.
+# An MNIST sample of that digit is applied to the plate face as a
+# sticker by sticker_loader.gd at episode reset.
 
 signal plate_hit(damage: int, source_id: int)
 
 @export var team: String = "blue"
 @export var face: String = "front"
-@export var icon: String = "Standard"
+@export var number: int = 3
 @export var max_hp: int = 200
 
 var hp: int = 0
@@ -37,6 +38,19 @@ func apply_damage(amount: int, source_id: int) -> void:
 func reset_for_new_episode() -> void:
     hp = max_hp
     _refresh_glow()
+
+
+func apply_sticker(tex: Texture2D) -> void:
+    # Sticker quad is a child node "Sticker" (MeshInstance3D with a
+    # StandardMaterial3D albedo). sticker_loader.gd hands the chassis-
+    # wide MNIST texture to every plate, so all four match.
+    var sticker := get_node_or_null("Sticker") as MeshInstance3D
+    if sticker == null:
+        return
+    var mat := sticker.material_override as StandardMaterial3D
+    if mat == null:
+        return
+    mat.albedo_texture = tex
 
 
 func _on_body_entered(other: Node3D) -> void:

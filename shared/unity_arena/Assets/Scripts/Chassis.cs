@@ -13,6 +13,10 @@ namespace TsingYun.UnityArena
     {
         public string Team = "blue";
         public int ChassisId = 0;
+        // RoboMaster numeric tag (1=Hero, 2=Engineer, 3/4/5=Standard, 7=Sentry).
+        // One per robot — every plate of this chassis displays the same
+        // number sticker (an MNIST sample of `Number`).
+        public int Number = 3;
         [Range(0f, 4f)] public float MaxLinearSpeed = 3.5f;
         [Range(0f, 8f)] public float MaxAngularSpeed = 4.0f;
 
@@ -26,6 +30,7 @@ namespace TsingYun.UnityArena
         private MecanumChassisController _solver;
         private CharacterController _controller;
         private ArmorPlate[] _plates;
+        private StickerLoader _stickerLoader;
 
         private void Awake()
         {
@@ -36,17 +41,18 @@ namespace TsingYun.UnityArena
                 MaxAngularSpeed = MaxAngularSpeed,
             };
             Gimbal = GetComponentInChildren<Gimbal>();
+            _stickerLoader = GetComponent<StickerLoader>();
             AssignArmorMetadata();
         }
 
         private void AssignArmorMetadata()
         {
-            var faces = new (string ChildName, string Face, string Icon)[]
+            var faces = new (string ChildName, string Face)[]
             {
-                ("ArmorPlateFront", "front", "Hero"),
-                ("ArmorPlateBack",  "back",  "Engineer"),
-                ("ArmorPlateLeft",  "left",  "Standard"),
-                ("ArmorPlateRight", "right", "Sentry"),
+                ("ArmorPlateFront", "front"),
+                ("ArmorPlateBack",  "back"),
+                ("ArmorPlateLeft",  "left"),
+                ("ArmorPlateRight", "right"),
             };
             var found = new List<ArmorPlate>();
             foreach (var f in faces)
@@ -61,7 +67,7 @@ namespace TsingYun.UnityArena
                 if (plate == null) continue;
                 plate.Team = Team;
                 plate.Face = f.Face;
-                plate.Icon = f.Icon;
+                plate.Number = Number;
                 plate.PlateHit += (dmg, src) => RaiseArmorHit(plate.PlateId, dmg, src);
                 found.Add(plate);
             }
@@ -83,6 +89,7 @@ namespace TsingYun.UnityArena
             DamageTaken = 0;
             LinearVelocity = Vector3.zero;
             if (_plates != null) foreach (var p in _plates) p.ResetForNewEpisode();
+            if (_stickerLoader != null) _stickerLoader.LoadStickerForCurrentNumber();
         }
 
         private void FixedUpdate()

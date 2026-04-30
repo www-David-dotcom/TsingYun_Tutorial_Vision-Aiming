@@ -10,7 +10,7 @@ namespace TsingYun.UnityArena
     {
         public string Team = "blue";
         public string Face = "front";
-        public string Icon = "Standard";
+        public int Number = 3;
         public int MaxHp = 200;
         public int Hp;
 
@@ -34,8 +34,13 @@ namespace TsingYun.UnityArena
     {
         public string Team = "blue";
         public string Face = "front";
-        public string Icon = "Standard";
+        public int Number = 3;
         public int MaxHp = 200;
+
+        // Inspector-assigned: a child quad whose material albedo is the
+        // MNIST sticker. StickerLoader writes the texture here at episode
+        // reset.
+        [SerializeField] private MeshRenderer stickerRenderer;
 
         public event Action<int, int> PlateHit;  // damage, sourceInstanceId
 
@@ -50,10 +55,18 @@ namespace TsingYun.UnityArena
             {
                 Team = Team,
                 Face = Face,
-                Icon = Icon,
+                Number = Number,
                 MaxHp = MaxHp,
             };
             _state.Reset();
+        }
+
+        public void ApplySticker(Texture2D tex)
+        {
+            if (stickerRenderer != null && stickerRenderer.material != null)
+            {
+                stickerRenderer.material.mainTexture = tex;
+            }
         }
 
         public void ResetForNewEpisode()

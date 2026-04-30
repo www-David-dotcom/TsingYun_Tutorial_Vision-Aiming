@@ -14,6 +14,10 @@ signal armor_hit(plate_id: String, damage: int, source_id: int)
 
 @export var team: String = "blue"
 @export var chassis_id: int = 0
+# RoboMaster numeric tag for this robot. 1=Hero, 2=Engineer, 3/4/5=Standard,
+# 7=Sentry. One number per robot — every plate of this chassis displays
+# the same number sticker (an MNIST sample of `chassis_number`).
+@export var chassis_number: int = 3
 @export_range(0.0, 4.0) var max_linear_speed: float = 3.5    # m/s
 @export_range(0.0, 8.0) var max_angular_speed: float = 4.0   # rad/s
 
@@ -31,25 +35,24 @@ func _ready() -> void:
 
 func _assign_armor_metadata() -> void:
     # Chassis layout: front/back along local -Z/+Z, left/right along
-    # local -X/+X. The icon assignment below is the canonical RM mapping
-    # (front = Hero / back = Engineer / left = Standard / right = Sentry)
-    # — HW1's detector training uses these labels.
+    # local -X/+X. All four plates display the same number sticker
+    # (chassis_number) — that's the real-RM convention: one number per
+    # robot, four identical stickers.
     var faces := {
-        "ArmorPlateFront": ["front", "Hero"],
-        "ArmorPlateBack":  ["back",  "Engineer"],
-        "ArmorPlateLeft":  ["left",  "Standard"],
-        "ArmorPlateRight": ["right", "Sentry"],
+        "ArmorPlateFront": "front",
+        "ArmorPlateBack":  "back",
+        "ArmorPlateLeft":  "left",
+        "ArmorPlateRight": "right",
     }
     for child_name in faces:
         var node: Node = get_node_or_null(child_name)
         if node == null:
             push_warning("chassis: missing armor child %s" % child_name)
             continue
-        var face: String = faces[child_name][0]
-        var icon: String = faces[child_name][1]
+        var face: String = faces[child_name]
         node.team = team
         node.face = face
-        node.icon = icon
+        node.number = chassis_number
         node.plate_hit.connect(_on_plate_hit.bind(face))
 
 
@@ -85,6 +88,9 @@ func reset_for_new_episode(spawn_position: Vector3, spawn_yaw: float) -> void:
     damage_taken = 0
     for child in [$ArmorPlateFront, $ArmorPlateBack, $ArmorPlateLeft, $ArmorPlateRight]:
         child.reset_for_new_episode()
+    var loader: Node = get_node_or_null("StickerLoader")
+    if loader != null:
+        loader.load_sticker_for_current_number()
 
 
 func odom_state() -> Dictionary:
