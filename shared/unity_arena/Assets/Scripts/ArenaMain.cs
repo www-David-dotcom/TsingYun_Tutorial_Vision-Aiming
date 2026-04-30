@@ -23,6 +23,13 @@ namespace TsingYun.UnityArena
         public Camera GimbalCamera;
         public Transform ProjectileRoot;
 
+        // MapA scene wires these in Task 24 step 2 (Unity Inspector). Falls back
+        // to the placeholder hard-coded spawn vectors if not assigned, so the
+        // 12a placeholder ArenaMain scene still runs.
+        public Transform SpawnPointBlue;
+        public Transform SpawnPointRed;
+        public GameObject ProjectilePrefab;
+
         public EpisodeState State { get; private set; } = EpisodeState.Idle;
         public string EpisodeId { get; private set; } = "";
         public long DurationNs { get; private set; } = DefaultDurationNs;
@@ -155,9 +162,11 @@ namespace TsingYun.UnityArena
             _armorHits = 0;
             _damageDealt = 0;
 
-            BlueChassis.ResetForNewEpisode(new Vector3(-3f, 0f, 0f), 0f);
-            RedChassis.ResetForNewEpisode(new Vector3(3f, 0f, 0f), Mathf.PI);
-            // Despawn projectiles (12b will populate ProjectileRoot)
+            Vector3 blueSpawn = SpawnPointBlue != null ? SpawnPointBlue.position : new Vector3(-3f, 0f, 0f);
+            Vector3 redSpawn  = SpawnPointRed   != null ? SpawnPointRed.position   : new Vector3(3f, 0f, 0f);
+            BlueChassis.ResetForNewEpisode(blueSpawn, 0f);
+            RedChassis.ResetForNewEpisode(redSpawn, Mathf.PI);
+            // Despawn projectiles spawned by the previous episode.
             if (ProjectileRoot != null)
                 foreach (Transform child in ProjectileRoot) Destroy(child.gameObject);
 
@@ -187,14 +196,13 @@ namespace TsingYun.UnityArena
             if (State != EpisodeState.Running)
                 return new Dictionary<string, object> { { "accepted", false }, { "reason", "no_episode" }, { "queued_count", 0 } };
 
-            // Stage 12a stub: report acceptance without spawning. Full spawn in 12b.
             int burst = Mathf.Max(0, (int)AsLong(cmd, "burst_count", 1));
-            _projectilesFired += burst;
+            int queued = SpawnProjectiles(burst);
             return new Dictionary<string, object>
             {
-                { "accepted", burst > 0 },
-                { "reason", "" },
-                { "queued_count", burst },
+                { "accepted", queued > 0 },
+                { "reason", queued == burst ? "" : "rate_limit" },
+                { "queued_count", queued },
             };
         }
 
@@ -207,6 +215,27 @@ namespace TsingYun.UnityArena
             var stats = BuildEpisodeStats();
             _replay.Finish(stats);
             return stats;
+        }
+
+        private int SpawnProjectiles(int burst)
+        {
+            if (ProjectilePrefab == null || BlueChassis.Gimbal == null) return 0;
+            int queued = 0;
+            for (int i = 0; i < burst; i++)
+            {
+                ShotSpec spec = BlueChassis.Gimbal.ComputeShot();
+                var go = Instantiate(ProjectilePrefab, spec.Position, spec.Rotation, ProjectileRoot);
+                var p = go.GetComponent<Projectile>();
+                p.Arm(spec.Velocity, BlueChassis.Team);
+                queued++;
+                _projectilesFired++;
+                _events.Add(new Dictionary<string, object>
+                {
+                    { "stamp_ns", NowNs() }, { "kind", "KIND_FIRED" },
+                    { "armor_id", "" }, { "damage", 0 },
+                });
+            }
+            return queued;
         }
 
         private Dictionary<string, object> BuildSensorBundle()
