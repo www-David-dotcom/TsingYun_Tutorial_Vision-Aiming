@@ -38,7 +38,7 @@ namespace TsingYun.UnityArena
                 Debug.LogWarning($"[StickerLoader] {_chassis.Team}: chassis Number={n} out of MNIST range 0-9");
                 return;
             }
-            int sampleIdx = SeedRng.NextInt(samplesPerDigit);
+            int sampleIdx = SeedRng.NextInt(0, samplesPerDigit - 1);
             string path = $"{mnistResourceRoot}/{n}/{sampleIdx:000}";
             var tex = Resources.Load<Texture2D>(path);
             if (tex == null)
