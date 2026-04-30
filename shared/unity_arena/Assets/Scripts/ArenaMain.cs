@@ -63,6 +63,15 @@ namespace TsingYun.UnityArena
             Debug.Log($"[ArenaMain] control on tcp://0.0.0.0:{ControlPort}, frames on tcp://0.0.0.0:{FramePort}");
         }
 
+        private void OnDestroy()
+        {
+            // Release the replay file handle deterministically — finalizer-based
+            // disposal won't fire before the next scene's ReplayRecorder.Start
+            // tries to reopen the same path on the same seed (Unity test runner
+            // doing LoadSceneAsync between cases).
+            _replay?.Close();
+        }
+
         private object Dispatch(string method, Dictionary<string, object> request)
         {
             switch (method)

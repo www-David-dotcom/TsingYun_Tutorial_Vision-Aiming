@@ -27,6 +27,10 @@ namespace TsingYun.UnityArena
 
         public void Start(string episodeId, long seedValue)
         {
+            // Idempotent: close any prior writer so calling Start twice without
+            // Finish (or hitting the same episode_id again on a reused
+            // recorder) doesn't leak the previous file handle.
+            Close();
             _episodeId = episodeId;
             _seed = seedValue;
             Directory.CreateDirectory(_dir);
@@ -56,8 +60,20 @@ namespace TsingYun.UnityArena
                 { "kind", "footer" },
                 { "stats", stats },
             });
-            _writer.Close();
-            _writer = null;
+            Close();
+        }
+
+        // Releases the file handle without writing a footer. Used when the
+        // owning ArenaMain is destroyed mid-episode (scene reload, app quit) —
+        // the partial replay keeps its events but is missing the footer, which
+        // downstream parsers can detect.
+        public void Close()
+        {
+            if (_writer != null)
+            {
+                _writer.Close();
+                _writer = null;
+            }
             _open = false;
         }
 
