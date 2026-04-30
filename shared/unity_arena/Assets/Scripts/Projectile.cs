@@ -24,19 +24,65 @@ namespace TsingYun.UnityArena
         }
     }
 
-    // Stage 12a stub. Full implementation (Rigidbody integration, quadratic
-    // drag in FixedUpdate, lifetime caps, friendly-fire check) lands in
-    // Stage 12b Task 11.
+    // 17 mm-style ball projectile. Quadratic drag is applied per FixedUpdate
+    // (Rigidbody.linearDamping is exponential decay, which is wrong for a real
+    // projectile). Gravity comes from the engine. Lifetime caps: MaxRangeM
+    // (30 m) and MaxTtlSeconds (4 s). Mirrors projectile.gd.
+    [RequireComponent(typeof(Rigidbody))]
     public class Projectile : MonoBehaviour
     {
         public string Team = "blue";
-        public bool Consumed = false;
+        public bool Consumed { get; private set; }
 
-        public int OnArmorHit(ArmorPlate plate) => 0;
+        private Rigidbody _rb;
+        private Vector3 _spawnPosition;
+        private float _spawnTimeSeconds;
+
+        private void Awake() { _rb = GetComponent<Rigidbody>(); }
 
         public void Arm(Vector3 initialVelocity, string owningTeam)
         {
+            _spawnPosition = transform.position;
+            _spawnTimeSeconds = Time.time;
             Team = owningTeam;
+            _rb.linearVelocity = initialVelocity;
+        }
+
+        private void FixedUpdate()
+        {
+            if (Consumed) return;
+            Vector3 dragForce = ProjectileDragSolver.QuadraticDragForce(_rb.linearVelocity);
+            _rb.AddForce(dragForce, ForceMode.Force);
+
+            if ((transform.position - _spawnPosition).magnitude > ProjectileDragSolver.MaxRangeM)
+                Consume("miss_range");
+            else if (Time.time - _spawnTimeSeconds > ProjectileDragSolver.MaxTtlSeconds)
+                Consume("miss_range");
+        }
+
+        public int OnArmorHit(ArmorPlate plate)
+        {
+            if (Consumed) return 0;
+            if (plate.Team == Team)
+            {
+                Consume("friendly");
+                return 0;
+            }
+            Consume($"hit_armor:{plate.PlateId}");
+            return ProjectileDragSolver.Damage;
+        }
+
+        private void OnCollisionEnter(Collision other)
+        {
+            if (Consumed) return;
+            // Plates are triggers, not colliders, so this only fires on walls/floor.
+            Consume("hit_wall");
+        }
+
+        private void Consume(string reason)
+        {
+            Consumed = true;
+            Destroy(gameObject);
         }
     }
 }

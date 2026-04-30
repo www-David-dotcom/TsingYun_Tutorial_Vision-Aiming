@@ -80,4 +80,65 @@ namespace TsingYun.UnityArena
         public float YawRate;
         public float PitchRate;
     }
+
+    // MonoBehaviour wrapping GimbalKinematics. Drives YawPivot.localRotation
+    // and PitchPivot.localRotation in FixedUpdate. Mirrors gimbal.gd.
+    public class Gimbal : MonoBehaviour
+    {
+        public const float MuzzleVelocity = 27.0f;
+
+        public Transform YawPivot;
+        public Transform PitchPivot;
+        public Transform Muzzle;
+
+        private GimbalKinematics _k = new GimbalKinematics();
+
+        private void Awake()
+        {
+            if (YawPivot == null) YawPivot = transform.Find("YawPivot");
+            if (PitchPivot == null) PitchPivot = YawPivot != null ? YawPivot.Find("PitchPivot") : null;
+            if (Muzzle == null && PitchPivot != null) Muzzle = PitchPivot.Find("Muzzle");
+        }
+
+        public void SetTarget(float yaw, float pitch, float yawFf, float pitchFf)
+            => _k.SetTarget(yaw, pitch, yawFf, pitchFf);
+
+        public void Reset() => _k.Reset();
+
+        public GimbalState GetState() => _k.GetState();
+
+        private void FixedUpdate()
+        {
+            _k.IntegrateStep(Time.fixedDeltaTime);
+            if (YawPivot != null) YawPivot.localRotation = Quaternion.Euler(0f, _k.YawRad * Mathf.Rad2Deg, 0f);
+            if (PitchPivot != null) PitchPivot.localRotation = Quaternion.Euler(_k.PitchRad * Mathf.Rad2Deg, 0f, 0f);
+        }
+
+        public Matrix4x4 MuzzleWorldTransform()
+            => Muzzle != null ? Muzzle.localToWorldMatrix : transform.localToWorldMatrix;
+
+        public ShotSpec ComputeShot()
+        {
+            Matrix4x4 m = Muzzle != null ? Muzzle.localToWorldMatrix : transform.localToWorldMatrix;
+            Vector3 fwd = -((Vector3)m.GetColumn(2)).normalized;
+            float jitterYaw = SeedRng.NextRange(-0.002f, 0.002f);
+            float jitterPitch = SeedRng.NextRange(-0.002f, 0.002f);
+            fwd = Quaternion.AngleAxis(jitterYaw * Mathf.Rad2Deg, Vector3.up) * fwd;
+            Vector3 right = ((Vector3)m.GetColumn(0)).normalized;
+            fwd = Quaternion.AngleAxis(jitterPitch * Mathf.Rad2Deg, right) * fwd;
+            return new ShotSpec
+            {
+                Position = m.GetColumn(3),
+                Rotation = m.rotation,
+                Velocity = fwd * MuzzleVelocity,
+            };
+        }
+    }
+
+    public struct ShotSpec
+    {
+        public Vector3 Position;
+        public Quaternion Rotation;
+        public Vector3 Velocity;
+    }
 }
