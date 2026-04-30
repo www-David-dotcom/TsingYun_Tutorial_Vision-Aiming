@@ -307,8 +307,10 @@ namespace TsingYun.UnityArena
 
         private string ResolveOutcome()
         {
-            if (BlueChassis.DamageTaken >= 800 && _damageDealt < 800) return "OUTCOME_LOSS";
-            if (_damageDealt >= 800 && BlueChassis.DamageTaken < 800) return "OUTCOME_WIN";
+            // HP is per-robot (Chassis.MaxHp). IsDestroyed fires when Hp hits
+            // 0; mutual destruction in the same tick falls through to TIMEOUT.
+            if (BlueChassis.IsDestroyed && !RedChassis.IsDestroyed) return "OUTCOME_LOSS";
+            if (RedChassis.IsDestroyed && !BlueChassis.IsDestroyed) return "OUTCOME_WIN";
             return "OUTCOME_TIMEOUT";
         }
 
