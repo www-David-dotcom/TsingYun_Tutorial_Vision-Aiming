@@ -31,12 +31,18 @@ namespace TsingYun.UnityArena
         private RenderTexture _captureRt;
         private bool _readbackInFlight;
 
-        private void Awake()
+        private void Start()
         {
+            // Bind in Start (not Awake) so callers can configure Port,
+            // FrameWidth, FrameHeight and SourceCamera between AddComponent
+            // and the next frame. Matches the test pattern in TcpFramePubTests
+            // and the spawn pattern in ArenaMain.Awake. ReuseAddress lets a
+            // scene reload rebind the port without waiting for TIME_WAIT.
             _captureRt = new RenderTexture(FrameWidth, FrameHeight, 0, RenderTextureFormat.ARGB32);
             _captureRt.Create();
 
             _listener = new TcpListener(IPAddress.Any, Port);
+            _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _listener.Start();
             _running = true;
             _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "TcpFramePub-accept" };

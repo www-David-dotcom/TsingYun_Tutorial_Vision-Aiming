@@ -28,9 +28,15 @@ namespace TsingYun.UnityArena
             _dispatch = dispatcher;
         }
 
-        private void Awake()
+        private void Start()
         {
+            // Bind in Start (not Awake) so callers can configure Port between
+            // AddComponent and the next frame. Matches the test pattern in
+            // TcpProtoServerTests and the spawn pattern in ArenaMain.Awake.
+            // ReuseAddress lets a scene reload rebind the port without waiting
+            // for TIME_WAIT.
             _listener = new TcpListener(IPAddress.Any, Port);
+            _listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
             _listener.Start();
             _running = true;
             _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "TcpProtoServer-accept" };
