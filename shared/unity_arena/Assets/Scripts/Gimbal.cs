@@ -120,7 +120,10 @@ namespace TsingYun.UnityArena
         public ShotSpec ComputeShot()
         {
             Matrix4x4 m = Muzzle != null ? Muzzle.localToWorldMatrix : transform.localToWorldMatrix;
-            Vector3 fwd = -((Vector3)m.GetColumn(2)).normalized;
+            // Unity convention: muzzle's local +Z is forward (transform.forward).
+            // The Muzzle marker sits at PitchPivot.local (0, 0, +0.30) and bullets
+            // fly along its +Z direction.
+            Vector3 fwd = ((Vector3)m.GetColumn(2)).normalized;
             float jitterYaw = SeedRng.NextRange(-0.002f, 0.002f);
             float jitterPitch = SeedRng.NextRange(-0.002f, 0.002f);
             fwd = Quaternion.AngleAxis(jitterYaw * Mathf.Rad2Deg, Vector3.up) * fwd;
