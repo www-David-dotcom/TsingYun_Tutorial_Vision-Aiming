@@ -52,16 +52,19 @@ namespace TsingYun.UnityArena
 
         // Called by Chassis after every hit (and at episode reset with
         // t=1). t = chassis.Hp / chassis.MaxHp ∈ [0,1]. All four plates
-        // glow identically because they share the chassis HP.
+        // glow identically because they share the chassis HP. Base color
+        // is the team's identification colour (per schema.md §armor-plate
+        // "lights glow blue or red to identify team"); brightness ramps
+        // up as HP drops so the plate flares as it nears destruction.
         public void RefreshGlow(float t)
         {
             if (plateRenderer == null || plateRenderer.material == null) return;
-            var glowColor = Color.Lerp(
-                new Color(0.2f, 0.4f, 1.0f),
-                new Color(1.0f, 0.2f, 0.1f),
-                1f - t);
+            Color teamColor = Team == "red"
+                ? new Color(1.0f, 0.2f, 0.1f)
+                : new Color(0.2f, 0.4f, 1.0f);
+            float energy = Mathf.Lerp(1.5f, 4.5f, 1f - t);
             var mat = plateRenderer.material;
-            mat.SetColor("_EmissionColor", glowColor * Mathf.Lerp(1.5f, 4.5f, 1f - t));
+            mat.SetColor("_EmissionColor", teamColor * energy);
             mat.EnableKeyword("_EMISSION");
         }
 
