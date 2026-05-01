@@ -193,10 +193,23 @@ namespace TsingYun.UnityArena
             _pendingShots = 0;
             _nextShotTime = 0f;
 
+            // Position AND rotation come from the spawn-point transforms now.
+            // Hardcoded yaw (0 / π) was forcing the gimbal POV out-of-map
+            // regardless of where the spawn point was placed; the user
+            // couldn't aim chassis facing without editing this file.
+            // Convention: the chassis Y rotation is copied from the spawn
+            // point Y rotation, so the chassis local axes match the spawn
+            // point's. The muzzle / camera point along the chassis local
+            // -Z axis (Godot port convention), which means the spawn
+            // point's BACK direction (-Z, opposite of the blue arrow gizmo)
+            // is what the chassis aims at. Rotate the spawn point so its
+            // blue arrow faces AWAY from the desired aiming direction.
             Vector3 blueSpawn = SpawnPointBlue != null ? SpawnPointBlue.position : new Vector3(-3f, 0f, 0f);
             Vector3 redSpawn  = SpawnPointRed   != null ? SpawnPointRed.position   : new Vector3(3f, 0f, 0f);
-            BlueChassis.ResetForNewEpisode(blueSpawn, 0f);
-            RedChassis.ResetForNewEpisode(redSpawn, Mathf.PI);
+            float blueYaw = SpawnPointBlue != null ? SpawnPointBlue.eulerAngles.y * Mathf.Deg2Rad : 0f;
+            float redYaw  = SpawnPointRed   != null ? SpawnPointRed.eulerAngles.y * Mathf.Deg2Rad : Mathf.PI;
+            BlueChassis.ResetForNewEpisode(blueSpawn, blueYaw);
+            RedChassis.ResetForNewEpisode(redSpawn, redYaw);
             // Despawn projectiles spawned by the previous episode.
             if (ProjectileRoot != null)
                 foreach (Transform child in ProjectileRoot) Destroy(child.gameObject);
