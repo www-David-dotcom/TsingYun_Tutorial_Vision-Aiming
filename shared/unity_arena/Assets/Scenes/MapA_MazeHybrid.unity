@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 0}
+  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionBounces: 1
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
-  m_Sun: {fileID: 0}
+  m_Sun: {fileID: 157207113}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: 4f9c701f07ba442cca37b195725651b0, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -663,6 +663,10 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 31967063}
+    - target: {fileID: 4688536406357692118, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
+      propertyPath: m_VersionIndex
+      value: 181
+      objectReference: {fileID: 0}
     - target: {fileID: 4691602737465583882, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -677,7 +681,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5496614719444399976, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -9
+      value: -7
       objectReference: {fileID: 0}
     - target: {fileID: 5496614719444399976, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
       propertyPath: m_LocalRotation.w
@@ -723,6 +727,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea744a81302724b369f3c854588839d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.Chassis
+--- !u!20 &106190607 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 4819856162812862479, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
+  m_PrefabInstance: {fileID: 106190605}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &122698466
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -897,7 +906,7 @@ Light:
   m_BounceIntensity: 1
   m_ColorTemperature: 6500
   m_UseColorTemperature: 1
-  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_BoundingSphereOverride: {x: 1e-45, y: 1.1051068e+26, z: 1e-45, w: 2.5916737e+32}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
   m_ForceVisible: 0
@@ -1226,7 +1235,7 @@ MonoBehaviour:
   FramePort: 7655
   BlueChassis: {fileID: 106190606}
   RedChassis: {fileID: 2100977968}
-  GimbalCamera: {fileID: 0}
+  GimbalCamera: {fileID: 106190607}
   ProjectileRoot: {fileID: 804978014}
   SpawnPointBlue: {fileID: 1533650234}
   SpawnPointRed: {fileID: 398086101}
@@ -2121,7 +2130,7 @@ Transform:
   m_GameObject: {fileID: 398086100}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 9, y: 0, z: 9}
+  m_LocalPosition: {x: 9, y: 0, z: 7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3934,7 +3943,7 @@ Transform:
   m_GameObject: {fileID: 1533650233}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -9, y: 0, z: -9}
+  m_LocalPosition: {x: -9, y: 0, z: -7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -5234,6 +5243,10 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 326665028}
+    - target: {fileID: 4688536406357692118, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
+      propertyPath: m_VersionIndex
+      value: 181
+      objectReference: {fileID: 0}
     - target: {fileID: 4691602737465583882, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
       propertyPath: m_Mesh
       value: 
@@ -5248,7 +5261,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5496614719444399976, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 9
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 5496614719444399976, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
       propertyPath: m_LocalRotation.w
