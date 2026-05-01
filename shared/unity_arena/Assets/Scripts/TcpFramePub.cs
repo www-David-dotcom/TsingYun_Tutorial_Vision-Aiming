@@ -45,7 +45,12 @@ namespace TsingYun.UnityArena
             // and the next frame. Matches the test pattern in TcpFramePubTests
             // and the spawn pattern in ArenaMain.Awake. ReuseAddress lets a
             // scene reload rebind the port without waiting for TIME_WAIT.
-            _captureRt = new RenderTexture(FrameWidth, FrameHeight, 0, RenderTextureFormat.ARGB32);
+            // 24-bit depth buffer required for proper Z-test. With 0 (no
+            // depth buffer), opaque geometry renders in submission order
+            // and the skybox bleeds through where it shouldn't — the
+            // captured frames came back as grey/skyline garbage even
+            // though the same camera renders the Game view correctly.
+            _captureRt = new RenderTexture(FrameWidth, FrameHeight, 24, RenderTextureFormat.ARGB32);
             _captureRt.Create();
 
             _listener = new TcpListener(IPAddress.Any, Port);
