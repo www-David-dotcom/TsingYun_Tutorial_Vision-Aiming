@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace TsingYun.UnityArena
 {
@@ -30,6 +31,12 @@ namespace TsingYun.UnityArena
         private ulong _frameId;
         private RenderTexture _captureRt;
         private bool _readbackInFlight;
+        // Process-lifetime monotonic clock for stamp_ns. Replaces the previous
+        // `Stopwatch.GetTimestamp() * 1_000_000_000L / Frequency` math which
+        // on Apple Silicon (1 GHz mach_absolute_time, value is mac uptime)
+        // overflowed `long` after ~9 s of mac uptime — i.e. essentially
+        // always producing wrap-around stamp_ns values in the wire stream.
+        private static readonly Stopwatch _processClock = Stopwatch.StartNew();
 
         private void Start()
         {
@@ -113,8 +120,7 @@ namespace TsingYun.UnityArena
 
             byte[] rgb = req.GetData<byte>().ToArray();
             _frameId++;
-            ulong stampNs = (ulong)(System.Diagnostics.Stopwatch.GetTimestamp() * 1_000_000_000L /
-                                    System.Diagnostics.Stopwatch.Frequency);
+            ulong stampNs = (ulong)(_processClock.ElapsedMilliseconds * 1_000_000L);
 
             byte[] header = new byte[16];
             BitConverter.GetBytes(_frameId).CopyTo(header, 0);

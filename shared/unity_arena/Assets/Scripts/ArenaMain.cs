@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace TsingYun.UnityArena
 {
@@ -47,6 +48,12 @@ namespace TsingYun.UnityArena
         private TcpFramePub _framePub;
         private ReplayRecorder _replay;
 
+        // Process-lifetime monotonic clock. Stopwatch.StartNew/.ElapsedMilliseconds
+        // is overflow-safe (won't wrap for ~292M years) — replacing the previous
+        // `Stopwatch.GetTimestamp() * 1000L / Frequency` math which on Apple
+        // Silicon (1 GHz mach_absolute_time, value is mac uptime not process
+        // uptime) overflowed `long` after 107 days of mac uptime.
+        private static readonly Stopwatch _processClock = Stopwatch.StartNew();
         private long _startedTicksMs;
         private readonly List<Dictionary<string, object>> _events = new List<Dictionary<string, object>>();
         private int _projectilesFired;
@@ -177,8 +184,7 @@ namespace TsingYun.UnityArena
 
             SeedRng.Reseed(seedValue);
             EpisodeId = $"ep-{seedValue:x16}";
-            _startedTicksMs = System.Diagnostics.Stopwatch.GetTimestamp() * 1000L /
-                              System.Diagnostics.Stopwatch.Frequency;
+            _startedTicksMs = _processClock.ElapsedMilliseconds;
             FrameId = 0;
             _events.Clear();
             _projectilesFired = 0;
@@ -210,6 +216,19 @@ namespace TsingYun.UnityArena
         {
             if (State != EpisodeState.Running)
                 return new Dictionary<string, object> { { "_error", $"env_step called in state={State}" } };
+
+            // Apply the gimbal cmd from this tick. Mirrors arena_main.gd
+            // env_step: target_yaw/pitch are absolute targets in radians;
+            // *_rate_ff are optional feed-forward rates the agent can use to
+            // anticipate motion. Missing keys default to zero.
+            if (BlueChassis.Gimbal != null)
+            {
+                BlueChassis.Gimbal.SetTarget(
+                    (float)AsDouble(cmd, "target_yaw", 0.0),
+                    (float)AsDouble(cmd, "target_pitch", 0.0),
+                    (float)AsDouble(cmd, "yaw_rate_ff", 0.0),
+                    (float)AsDouble(cmd, "pitch_rate_ff", 0.0));
+            }
 
             FrameId++;
             if (NowNs() > DurationNs) State = EpisodeState.Finishing;
@@ -289,11 +308,13 @@ namespace TsingYun.UnityArena
             };
             if (OracleHints)
             {
-                Vector3 redPos = RedChassis.transform.position;
                 bundle["oracle"] = new Dictionary<string, object>
                 {
-                    { "target_position_world", new Dictionary<string, object> { { "x", (double)redPos.x }, { "y", (double)redPos.y }, { "z", (double)redPos.z } } },
-                    { "target_velocity_world", new Dictionary<string, object> { { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } } },
+                    { "target_position_world", Vec3Dict(RedChassis.transform.position) },
+                    // Was hard-coded zero; the MPC agent uses this for lead-
+                    // compensation when oracle_hints=true and would otherwise
+                    // aim at the current position instead of the intercept.
+                    { "target_velocity_world", Vec3Dict(RedChassis.LinearVelocity) },
                     { "target_visible", true },
                 };
             }
@@ -357,9 +378,7 @@ namespace TsingYun.UnityArena
 
         private long NowNs()
         {
-            long nowMs = System.Diagnostics.Stopwatch.GetTimestamp() * 1000L /
-                         System.Diagnostics.Stopwatch.Frequency;
-            return (nowMs - _startedTicksMs) * 1_000_000L;
+            return (_processClock.ElapsedMilliseconds - _startedTicksMs) * 1_000_000L;
         }
 
         private static long AsLong(Dictionary<string, object> dict, string key, long fallback)
@@ -367,6 +386,15 @@ namespace TsingYun.UnityArena
             if (!dict.TryGetValue(key, out var v) || v == null) return fallback;
             if (v is long l) return l;
             if (v is double d) return (long)d;
+            if (v is int i) return i;
+            return fallback;
+        }
+
+        private static double AsDouble(Dictionary<string, object> dict, string key, double fallback)
+        {
+            if (!dict.TryGetValue(key, out var v) || v == null) return fallback;
+            if (v is double d) return d;
+            if (v is long l) return l;
             if (v is int i) return i;
             return fallback;
         }

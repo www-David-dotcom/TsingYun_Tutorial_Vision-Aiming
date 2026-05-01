@@ -114,6 +114,10 @@ namespace TsingYun.UnityArena
             _hp.MaxHp = MaxHp;
             _hp.Reset();
             LinearVelocity = Vector3.zero;
+            // Episode N+1 must start from a known gimbal pose, otherwise the
+            // intra-Unity determinism test (same seed -> same frame hashes)
+            // sees state bleed-through from the prior episode.
+            if (Gimbal != null) Gimbal.Reset();
             if (_plates != null)
             {
                 foreach (var p in _plates)
