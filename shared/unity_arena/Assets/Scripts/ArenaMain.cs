@@ -404,5 +404,10 @@ namespace TsingYun.UnityArena
 
         private static bool AsBool(Dictionary<string, object> dict, string key, bool fallback)
             => dict.TryGetValue(key, out var v) && v is bool b ? b : fallback;
+
+        private static Dictionary<string, object> Vec3Dict(Vector3 v) => new Dictionary<string, object>
+        {
+            { "x", (double)v.x }, { "y", (double)v.y }, { "z", (double)v.z },
+        };
     }
 }
