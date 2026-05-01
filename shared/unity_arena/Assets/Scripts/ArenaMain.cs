@@ -14,6 +14,12 @@ namespace TsingYun.UnityArena
     {
         public const string SimBuildSha = "stage12a-unity-scaffold-1.6";
         public const long DefaultDurationNs = 90_000_000_000L;
+        // RM Standard robots cap fire rate around 10 Hz; 5 Hz here gives a
+        // visible cadence and matches the smoke-test viewing window.
+        // Burst fires from EnvPushFire are queued and drained at this rate
+        // by Update.DrainShotQueue rather than spawned all in one tick.
+        public const float BulletsPerSecond = 5f;
+        private const float BulletIntervalSeconds = 1f / BulletsPerSecond;
 
         public int ControlPort = 7654;
         public int FramePort = 7655;
@@ -46,6 +52,11 @@ namespace TsingYun.UnityArena
         private int _projectilesFired;
         private int _armorHits;
         private int _damageDealt;
+        // Rate-limited shot queue. EnvPushFire increments _pendingShots; Update
+        // drains one shot per BulletIntervalSeconds. Reset on EnvReset so
+        // unfired shots from a previous episode don't carry over.
+        private int _pendingShots;
+        private float _nextShotTime;
 
         // TcpProtoServer dispatches on its accept/client thread; EnvReset / Step /
         // PushFire / Finish all touch Unity transform/component APIs which are
@@ -100,6 +111,18 @@ namespace TsingYun.UnityArena
             {
                 try { action(); }
                 catch (Exception ex) { Debug.LogException(ex); }
+            }
+            DrainShotQueue();
+        }
+
+        private void DrainShotQueue()
+        {
+            if (State != EpisodeState.Running) return;
+            while (_pendingShots > 0 && Time.time >= _nextShotTime)
+            {
+                SpawnSingleProjectile();
+                _pendingShots--;
+                _nextShotTime = Time.time + BulletIntervalSeconds;
             }
         }
 
@@ -161,6 +184,8 @@ namespace TsingYun.UnityArena
             _projectilesFired = 0;
             _armorHits = 0;
             _damageDealt = 0;
+            _pendingShots = 0;
+            _nextShotTime = 0f;
 
             Vector3 blueSpawn = SpawnPointBlue != null ? SpawnPointBlue.position : new Vector3(-3f, 0f, 0f);
             Vector3 redSpawn  = SpawnPointRed   != null ? SpawnPointRed.position   : new Vector3(3f, 0f, 0f);
@@ -195,14 +220,19 @@ namespace TsingYun.UnityArena
         {
             if (State != EpisodeState.Running)
                 return new Dictionary<string, object> { { "accepted", false }, { "reason", "no_episode" }, { "queued_count", 0 } };
+            if (ProjectilePrefab == null || BlueChassis.Gimbal == null)
+                return new Dictionary<string, object> { { "accepted", false }, { "reason", "no_prefab" }, { "queued_count", 0 } };
 
             int burst = Mathf.Max(0, (int)AsLong(cmd, "burst_count", 1));
-            int queued = SpawnProjectiles(burst);
+            // Burst is enqueued; Update.DrainShotQueue spawns one bullet per
+            // BulletIntervalSeconds so consecutive shots are visible as a
+            // staggered stream rather than overlapping at the muzzle.
+            _pendingShots += burst;
             return new Dictionary<string, object>
             {
-                { "accepted", queued > 0 },
-                { "reason", queued == burst ? "" : "rate_limit" },
-                { "queued_count", queued },
+                { "accepted", burst > 0 },
+                { "reason", "" },
+                { "queued_count", burst },
             };
         }
 
@@ -217,25 +247,18 @@ namespace TsingYun.UnityArena
             return stats;
         }
 
-        private int SpawnProjectiles(int burst)
+        private void SpawnSingleProjectile()
         {
-            if (ProjectilePrefab == null || BlueChassis.Gimbal == null) return 0;
-            int queued = 0;
-            for (int i = 0; i < burst; i++)
+            ShotSpec spec = BlueChassis.Gimbal.ComputeShot();
+            var go = Instantiate(ProjectilePrefab, spec.Position, spec.Rotation, ProjectileRoot);
+            var p = go.GetComponent<Projectile>();
+            p.Arm(spec.Velocity, BlueChassis.Team);
+            _projectilesFired++;
+            _events.Add(new Dictionary<string, object>
             {
-                ShotSpec spec = BlueChassis.Gimbal.ComputeShot();
-                var go = Instantiate(ProjectilePrefab, spec.Position, spec.Rotation, ProjectileRoot);
-                var p = go.GetComponent<Projectile>();
-                p.Arm(spec.Velocity, BlueChassis.Team);
-                queued++;
-                _projectilesFired++;
-                _events.Add(new Dictionary<string, object>
-                {
-                    { "stamp_ns", NowNs() }, { "kind", "KIND_FIRED" },
-                    { "armor_id", "" }, { "damage", 0 },
-                });
-            }
-            return queued;
+                { "stamp_ns", NowNs() }, { "kind", "KIND_FIRED" },
+                { "armor_id", "" }, { "damage", 0 },
+            });
         }
 
         private Dictionary<string, object> BuildSensorBundle()
