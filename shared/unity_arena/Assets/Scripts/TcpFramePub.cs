@@ -59,7 +59,15 @@ namespace TsingYun.UnityArena
                 foreach (var c in _clients) c.Close();
                 _clients.Clear();
             }
-            if (_captureRt != null) _captureRt.Release();
+            if (_captureRt != null)
+            {
+                // Release() frees GPU memory but leaves the managed wrapper
+                // alive — Unity's leak detector flags that as a persistent
+                // native allocation. Destroy() releases the wrapper too.
+                _captureRt.Release();
+                Destroy(_captureRt);
+                _captureRt = null;
+            }
         }
 
         private void AcceptLoop()
