@@ -77,10 +77,15 @@ def read_one_frame(frame_sock: socket.socket, width: int, height: int) -> bytes:
 
 def capture_frames(host: str, control_port: int, frame_port: int,
                    width: int = 1280, height: int = 720) -> dict[str, str]:
-    """Return dict mapping `seed_<S>_pose_<P>` -> sha256 hex of RGB888 bytes."""
+    """Return dict mapping `seed_<S>_pose_<P>` -> sha256 hex of RGB888 bytes.
+
+    The frame socket is connected only during the brief capture window,
+    not during env_reset / env_step. TcpFramePub stops publishing when
+    no clients are connected, so its 2.7 MB/frame stream can't fill the
+    kernel send buffer and block Unity's main thread on Stream.Write.
+    """
     hashes: dict[str, str] = {}
-    with socket.create_connection((host, control_port), timeout=5) as sock, \
-         socket.create_connection((host, frame_port), timeout=5) as fsock:
+    with socket.create_connection((host, control_port), timeout=10) as sock:
         for seed in SEEDS:
             for pose_idx, (yaw, pitch) in enumerate(POSES):
                 send_request(sock, "env_reset", {
@@ -91,11 +96,13 @@ def capture_frames(host: str, control_port: int, frame_port: int,
                     send_request(sock, "env_step", {
                         "stamp_ns": 0, "target_yaw": yaw, "target_pitch": pitch,
                     })
-                # Drain a few stale frames so we capture one rendered AFTER
-                # the gimbal settled at the target pose.
-                for _ in range(3):
-                    read_one_frame(fsock, width, height)
-                frame_bytes = read_one_frame(fsock, width, height)
+                # Capture window: connect, drain a few stale frames so the
+                # one we keep was rendered AFTER TcpFramePub registered the
+                # new client and pushed fresh content, then close.
+                with socket.create_connection((host, frame_port), timeout=10) as fsock:
+                    for _ in range(3):
+                        read_one_frame(fsock, width, height)
+                    frame_bytes = read_one_frame(fsock, width, height)
                 send_request(sock, "env_finish", {})
                 key = f"seed_{seed:04d}_pose_{pose_idx}"
                 hashes[key] = hashlib.sha256(frame_bytes).hexdigest()
