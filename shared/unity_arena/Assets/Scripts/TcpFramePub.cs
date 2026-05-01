@@ -123,7 +123,13 @@ namespace TsingYun.UnityArena
             _readbackInFlight = false;
             if (req.hasError) return;
 
-            byte[] rgb = req.GetData<byte>().ToArray();
+            // AsyncGPUReadback returns bytes in GPU-native row order (bottom-up
+            // on Metal/macOS; varies per platform). PNG / NN inputs expect
+            // top-down. Game view doesn't hit this because it goes through
+            // Unity's screen blit which flips for the display API; raw readback
+            // skips that step.
+            byte[] raw = req.GetData<byte>().ToArray();
+            byte[] rgb = FlipRowsRgb(raw, FrameWidth, FrameHeight);
             _frameId++;
             ulong stampNs = (ulong)(_processClock.ElapsedMilliseconds * 1_000_000L);
 
@@ -132,6 +138,19 @@ namespace TsingYun.UnityArena
             BitConverter.GetBytes(stampNs).CopyTo(header, 8);
 
             BroadcastFrame(header, rgb);
+        }
+
+        private static byte[] FlipRowsRgb(byte[] src, int width, int height)
+        {
+            int rowBytes = width * 3;
+            byte[] dst = new byte[src.Length];
+            for (int y = 0; y < height; y++)
+            {
+                int srcOffset = (height - 1 - y) * rowBytes;
+                int dstOffset = y * rowBytes;
+                Buffer.BlockCopy(src, srcOffset, dst, dstOffset, rowBytes);
+            }
+            return dst;
         }
 
         private void BroadcastFrame(byte[] header, byte[] body)
