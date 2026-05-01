@@ -566,7 +566,7 @@ GameObject:
   - component: {fileID: 8098973845202359119}
   - component: {fileID: 2552534847484825113}
   - component: {fileID: 2824451090206270927}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: Chassis
   m_TagString: Untagged
   m_Icon: {fileID: 0}
