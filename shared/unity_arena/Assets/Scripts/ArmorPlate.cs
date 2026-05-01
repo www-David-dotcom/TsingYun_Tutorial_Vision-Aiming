@@ -36,19 +36,11 @@ namespace TsingYun.UnityArena
 
         public event Action<int, int> PlateHit;  // damage, sourceInstanceId
 
-        private ArmorPlateState _state;
-
-        public string PlateId => _state.PlateId;
-
-        private void Awake()
-        {
-            _state = new ArmorPlateState
-            {
-                Team = Team,
-                Face = Face,
-                Number = Number,
-            };
-        }
+        // Computed on demand from the public fields so chassis-side
+        // overrides written after this plate's Awake (Chassis.AssignArmor-
+        // Metadata) are reflected. Caching at Awake time would freeze the
+        // prefab default ("blue.front") on every plate.
+        public string PlateId => $"{Team}.{Face}";
 
         public void ApplySticker(Texture2D tex)
         {
