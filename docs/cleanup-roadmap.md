@@ -25,9 +25,15 @@
 - [x] Ensure every candidate blank starts with `TODO`.
 - [x] Add lightweight mini-tests for partial task completion.
 
-## Milestone 4: Training And Visual Polish
+## Milestone 4: Training Ground And RL Scaffold
 
 - [ ] Add training-ground scene with adjustable target translation and rotation.
 - [ ] Add baseline non-player aiming strategy.
+- [ ] Add deterministic training telemetry and smoke checks for target motion, baseline aim, hit rate, and reset behavior.
 - [ ] Add RL training scaffold after rule runtime stabilizes.
+
+## Milestone 5: Visual Effects And Readability Polish
+
 - [ ] Upgrade scene visuals toward the sci-fi industrial style in `schema.md`.
+- [ ] Preserve armor, team color, target, rule-zone, and frame-stream readability while adding lighting, material, and VFX polish.
+- [ ] Add screenshot or PlayMode visual QA checks before treating the visual pass as complete.
