@@ -13,6 +13,7 @@ namespace TsingYun.UnityArena.EditorUtilities
         private const string ScenePath = "Assets/Scenes/TrainingGround.unity";
         private const string ChassisPrefabPath = "Assets/Prefabs/Chassis.prefab";
         private const string ProjectilePrefabPath = "Assets/Prefabs/Projectile.prefab";
+        private const float ChassisSpawnHeightMeters = 0.05f;
 
         [MenuItem("TsingYun/Build Training Ground Scene")]
         public static void Build()
@@ -26,12 +27,12 @@ namespace TsingYun.UnityArena.EditorUtilities
             var baseline = arenaObject.AddComponent<BaselineOpponentController>();
             arenaObject.AddComponent<RuleZonePresentation>();
 
-            Chassis blue = CreateChassis("BlueChassis", "blue", new Vector3(-3f, 0f, 0f));
-            Chassis red = CreateChassis("RedChassis", "red", new Vector3(3f, 0f, 0f));
+            Chassis blue = CreateChassis("BlueChassis", "blue", new Vector3(-3f, ChassisSpawnHeightMeters, 0f));
+            Chassis red = CreateChassis("RedChassis", "red", new Vector3(3f, ChassisSpawnHeightMeters, 0f));
             arena.BlueChassis = blue;
             arena.RedChassis = red;
-            arena.SpawnPointBlue = CreateMarker("SpawnPoint_Blue", new Vector3(-3f, 0f, 0f), 45f).transform;
-            arena.SpawnPointRed = CreateMarker("SpawnPoint_Red", new Vector3(3f, 0f, 0f), -135f).transform;
+            arena.SpawnPointBlue = CreateMarker("SpawnPoint_Blue", new Vector3(-3f, ChassisSpawnHeightMeters, 0f), 45f).transform;
+            arena.SpawnPointRed = CreateMarker("SpawnPoint_Red", new Vector3(3f, ChassisSpawnHeightMeters, 0f), -135f).transform;
             arena.ProjectileRoot = new GameObject("ProjectileRoot").transform;
             arena.ProjectilePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ProjectilePrefabPath);
 
