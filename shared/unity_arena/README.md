@@ -55,6 +55,7 @@ PlayMode tests: `Assets/Tests/PlayMode/`
 
 Python wire conformance (no Unity needed): `tests/test_arena_wire_format.py`
 Local Unity smoke: `tools/scripts/smoke_arena.py`
+Backend-only training and RL notes: [`docs/training-rl.md`](../../docs/training-rl.md)
 
 ## Project layout
 

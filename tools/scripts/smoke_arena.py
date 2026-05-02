@@ -57,18 +57,32 @@ def main() -> int:
     parser.add_argument("--port", default=7654, type=int)
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--ticks", default=10, type=int)
+    parser.add_argument("--training", action="store_true")
+    parser.add_argument("--target-translation-speed", default=1.0, type=float)
+    parser.add_argument("--target-rotation-speed", default=2.0, type=float)
+    parser.add_argument("--baseline-opponent", action="store_true")
     args = parser.parse_args()
 
     print(f"[smoke] host={args.host} port={args.port}")
 
     with socket.create_connection((args.host, args.port), timeout=5) as sock:
         # 1. Reset
-        reply = send_message(sock, "env_reset", {
+        reset_request = {
             "seed": args.seed,
             "opponent_tier": "bronze",
             "oracle_hints": True,
             "duration_ns": 5_000_000_000,
-        })
+        }
+        if args.training:
+            reset_request["training_config"] = {
+                "enabled": True,
+                "target_translation_speed_mps": args.target_translation_speed,
+                "target_rotation_speed_rad_s": args.target_rotation_speed,
+                "target_path_half_extent_m": 2.0,
+                "baseline_opponent_enabled": args.baseline_opponent,
+            }
+
+        reply = send_message(sock, "env_reset", reset_request)
         if not reply.get("ok"):
             print("env_reset failed:", reply, file=sys.stderr)
             return 1
@@ -83,9 +97,21 @@ def main() -> int:
                 "target_yaw": 0.05 * tick,
                 "target_pitch": 0.0,
             })
+            if not reply.get("ok"):
+                print("env_step failed:", reply, file=sys.stderr)
+                return 1
             bundle = json_format.ParseDict(reply["response"], sensor_pb2.SensorBundle())
             print(f"[step {tick:03d}] gimbal_yaw={bundle.gimbal.yaw:+.3f} "
                   f"frame_id={bundle.frame.frame_id}")
+            if args.training:
+                training = reply["response"]["training"]
+                print(
+                    f"[training {tick:03d}] "
+                    f"target_x={training['target_position_world']['x']:+.3f} "
+                    f"target_vx={training['target_velocity_world']['x']:+.3f} "
+                    f"reward={training['step_reward']:+.3f} "
+                    f"hit_rate={training['player_hit_rate']:.3f}"
+                )
 
         # 3. Fire a 3-pellet burst
         reply = send_message(sock, "env_push_fire", {"stamp_ns": 0, "burst_count": 3})
