@@ -56,6 +56,10 @@ namespace TsingYun.UnityArena
         private readonly MatchRuleRuntime _rules = new MatchRuleRuntime();
         private readonly ArenaEpisodeClock _clock = new ArenaEpisodeClock(() => _processClock.ElapsedMilliseconds);
         private RuleZonePresentation _ruleZonePresentation;
+        private bool _trainingEnabled;
+        private TrainingTargetController _trainingTarget;
+        private BaselineOpponentController _baselineOpponent;
+        private TrainingTargetSample _latestTrainingTargetSample;
         // Rate-limited shot queue. EnvPushFire increments _pendingShots; Update
         // drains one shot per BulletIntervalSeconds. Reset on EnvReset so
         // unfired shots from a previous episode don't carry over.
@@ -209,6 +213,7 @@ namespace TsingYun.UnityArena
             float redYaw  = SpawnPointRed   != null ? SpawnPointRed.eulerAngles.y * Mathf.Deg2Rad : Mathf.PI;
             BlueChassis.ResetForNewEpisode(blueSpawn, blueYaw);
             RedChassis.ResetForNewEpisode(redSpawn, redYaw);
+            ConfigureTrainingMode(request);
             // Despawn projectiles spawned by the previous episode.
             if (ProjectileRoot != null)
                 foreach (Transform child in ProjectileRoot) Destroy(child.gameObject);
@@ -302,7 +307,8 @@ namespace TsingYun.UnityArena
         private Dictionary<string, object> BuildSensorBundle()
         {
             long stamp = NowNs();
-            return ArenaWirePayloadBuilder.BuildSensorBundle(
+            RefreshLatestTrainingTargetSample();
+            var bundle = ArenaWirePayloadBuilder.BuildSensorBundle(
                 FrameId,
                 $"frames.{SeedRng.CurrentSeed()}",
                 stamp,
@@ -311,6 +317,18 @@ namespace TsingYun.UnityArena
                 OracleHints,
                 RedChassis.transform.position,
                 RedChassis.LinearVelocity);
+
+            if (_trainingEnabled)
+            {
+                bundle["training"] = TrainingTelemetryBuilder.Build(
+                    stamp,
+                    _latestTrainingTargetSample,
+                    _rules.State,
+                    BlueChassis.Team,
+                    State != EpisodeState.Running);
+            }
+
+            return bundle;
         }
 
         private Dictionary<string, object> BuildEpisodeStats()
@@ -464,6 +482,54 @@ namespace TsingYun.UnityArena
             }
         }
 
+        private void ConfigureTrainingMode(Dictionary<string, object> request)
+        {
+            Dictionary<string, object> training = AsDict(request, "training_config");
+            _trainingEnabled = training != null && AsBool(training, "enabled", false);
+            if (!_trainingEnabled)
+            {
+                if (_trainingTarget != null) _trainingTarget.enabled = false;
+                if (_baselineOpponent != null) _baselineOpponent.enabled = false;
+                _latestTrainingTargetSample = CurrentRedChassisSample();
+                return;
+            }
+
+            float targetTranslationSpeed = (float)AsDouble(training, "target_translation_speed_mps", 1.0);
+            float targetRotationSpeed = (float)AsDouble(training, "target_rotation_speed_rad_s", 1.0);
+            float targetPathHalfExtent = (float)AsDouble(training, "target_path_half_extent_m", 2.0);
+            bool baselineEnabled = AsBool(training, "baseline_opponent_enabled", false);
+
+            _trainingTarget = GetComponent<TrainingTargetController>();
+            if (_trainingTarget == null) _trainingTarget = gameObject.AddComponent<TrainingTargetController>();
+            _trainingTarget.enabled = true;
+            _trainingTarget.Configure(RedChassis, targetTranslationSpeed, targetRotationSpeed, targetPathHalfExtent);
+            _latestTrainingTargetSample = _trainingTarget.LatestSample;
+
+            _baselineOpponent = GetComponent<BaselineOpponentController>();
+            if (_baselineOpponent == null) _baselineOpponent = gameObject.AddComponent<BaselineOpponentController>();
+            _baselineOpponent.enabled = baselineEnabled;
+            _baselineOpponent.Configure(RedChassis, BlueChassis, fireWhenAligned: baselineEnabled);
+        }
+
+        private void RefreshLatestTrainingTargetSample()
+        {
+            if (_trainingEnabled && _trainingTarget != null)
+            {
+                _latestTrainingTargetSample = _trainingTarget.LatestSample;
+            }
+            else
+            {
+                _latestTrainingTargetSample = CurrentRedChassisSample();
+            }
+        }
+
+        private TrainingTargetSample CurrentRedChassisSample()
+            => new TrainingTargetSample(
+                RedChassis.transform.position,
+                RedChassis.LinearVelocity,
+                RedChassis.ChassisYaw,
+                0f);
+
         private long NowNs()
         {
             return _clock.NowNs;
@@ -507,6 +573,9 @@ namespace TsingYun.UnityArena
 
         private static bool AsBool(Dictionary<string, object> dict, string key, bool fallback)
             => dict.TryGetValue(key, out var v) && v is bool b ? b : fallback;
+
+        private static Dictionary<string, object> AsDict(Dictionary<string, object> dict, string key)
+            => dict.TryGetValue(key, out var v) && v is Dictionary<string, object> d ? d : null;
 
     }
 }
