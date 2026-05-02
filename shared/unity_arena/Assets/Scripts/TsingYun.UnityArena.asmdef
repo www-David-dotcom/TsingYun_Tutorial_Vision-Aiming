@@ -4,7 +4,8 @@
     "references": [
         "Unity.RenderPipelines.HighDefinition.Runtime",
         "Unity.InputSystem",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

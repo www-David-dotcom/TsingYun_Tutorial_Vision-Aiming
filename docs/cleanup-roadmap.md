@@ -27,7 +27,7 @@
 
 ## Milestone 4: Training Ground And RL Scaffold
 
-- [ ] Add training-ground scene with adjustable target translation and rotation.
+- [x] Add training-ground scene with adjustable target translation and rotation.
 - [x] Add baseline non-player aiming strategy.
 - [x] Add deterministic training telemetry and smoke checks for target motion, baseline aim, hit rate, and reset behavior.
 - [x] Add backend-only RL training scaffold after rule runtime stabilizes.
