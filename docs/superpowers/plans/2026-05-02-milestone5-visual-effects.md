@@ -14,6 +14,11 @@
 
 The visual direction is intentionally ambitious. Readability checks are guardrails against destructive failures, not an excuse to keep the scene sparse. External or generated assets are allowed if they are legally safe for the repo, but the first implementation should still create a strong procedural/editor-driven pass so the milestone can be completed without waiting on asset sourcing.
 
+The lighting target is dark cyberpunk, not daylight sci-fi. Sunlight and broad
+directional illumination should be dimmed aggressively; local neon strips,
+armor emitters, holograms, muzzle flashes, rule markers, and controlled rim
+lights should carry the scene.
+
 The Unity editor currently reports the active rendering pipeline as Built-in even though HDRP assets exist. Every material helper must set Built-in-safe color/emission properties first, then opportunistically set HDRP properties when they exist.
 
 ## File Structure
@@ -164,6 +169,7 @@ namespace TsingYun.UnityArena
         public Color BlueHealingColor = new Color(0f, 0.18f, 1f, 0.32f);
         public Color RedHealingColor = new Color(1f, 0f, 0f, 0.32f);
         public Color HologramTextColor = new Color(0.72f, 0.98f, 1f, 1f);
+        public Color DarkAmbientColor = new Color(0.005f, 0.008f, 0.012f, 1f);
 
         [Min(0f)] public float ArmorEmissionMin = 3.0f;
         [Min(0f)] public float ArmorEmissionMax = 8.5f;
@@ -181,6 +187,8 @@ namespace TsingYun.UnityArena
         [Range(0f, 1f)] public float MinTeamPixelRatio = 0.002f;
         [Range(0f, 1f)] public float NeonAccentTargetRatio = 0.055f;
         [Range(0f, 1f)] public float MaxNeonAccentRatio = 0.34f;
+        [Range(0f, 2f)] public float MaxDirectionalLightIntensity = 0.28f;
+        [Range(0f, 1f)] public float SceneAmbientIntensity = 0.04f;
 
         public static VisualPolishProfile CreateRuntimeDefault()
         {
@@ -1081,8 +1089,9 @@ namespace TsingYun.UnityArena.EditorUtilities
             var scene = EditorSceneManager.OpenScene(scenePath);
             GameObject root = GameObject.Find("VisualPolishRoot");
             if (root == null) root = new GameObject("VisualPolishRoot");
-            EnsureSceneLight(root.transform, "Visual_KeyCyan", new Vector3(-3f, 6f, -4f), profile.CyanAccentColor, 2.4f);
-            EnsureSceneLight(root.transform, "Visual_RimMagenta", new Vector3(4f, 4f, 3f), profile.MagentaAccentColor, 1.8f);
+            DimSceneSun(profile);
+            EnsureSceneLight(root.transform, "Visual_KeyCyan", new Vector3(-3f, 6f, -4f), profile.CyanAccentColor, 1.25f);
+            EnsureSceneLight(root.transform, "Visual_RimMagenta", new Vector3(4f, 4f, 3f), profile.MagentaAccentColor, 0.9f);
             EnsurePrimitive(root.transform, "Visual_CyanFloorSpine", PrimitiveType.Cube, Vector3.zero, training ? new Vector3(0.08f, 0.012f, 8f) : new Vector3(0.08f, 0.012f, 18f), cyan);
             EnsurePrimitive(root.transform, "Visual_MagentaFloorSpine", PrimitiveType.Cube, new Vector3(1.5f, 0.015f, 0f), training ? new Vector3(0.05f, 0.012f, 8f) : new Vector3(0.05f, 0.012f, 18f), magenta);
             EnsureAtmosphere(root.transform, training ? 24 : 48, profile);
@@ -1097,6 +1106,21 @@ namespace TsingYun.UnityArena.EditorUtilities
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
+        }
+
+        private static void DimSceneSun(VisualPolishProfile profile)
+        {
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+            RenderSettings.ambientLight = profile.DarkAmbientColor;
+            RenderSettings.ambientIntensity = profile.SceneAmbientIntensity;
+            foreach (Light light in Object.FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (light.type == LightType.Directional)
+                {
+                    light.intensity = Mathf.Min(light.intensity, profile.MaxDirectionalLightIntensity);
+                    light.color = new Color(0.45f, 0.55f, 0.68f, 1f);
+                }
+            }
         }
 
         private static GameObject LoadRequiredPrefab(string path)

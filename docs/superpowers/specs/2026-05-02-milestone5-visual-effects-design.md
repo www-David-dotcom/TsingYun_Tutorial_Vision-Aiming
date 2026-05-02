@@ -25,6 +25,11 @@ cues remain recoverable. QA should catch destructive failures, such as washed
 out stickers or lost red/blue identity, but it should not force the scene back
 into a flat prototype look.
 
+The arena should read as a dark cyberpunk environment. Sunlight and broad
+directional illumination must be dimmed aggressively; the primary readable
+light sources should be local neon strips, armor emitters, holograms, muzzle
+flashes, rule markers, and controlled rim lights.
+
 ## Hard Constraints
 
 - Armor plate base colors remain exact pure red `#FF0000` and pure blue
@@ -94,7 +99,8 @@ The main arena receives the full competitive neon treatment:
 - layered metal, carbon, glass, and panel materials,
 - cyan/magenta edge strips on important maze boundaries,
 - localized glow clusters, warning glyphs, and technical decals,
-- controlled key, fill, and rim lighting,
+- dimmed sunlight or disabled directional sun,
+- controlled low-intensity key, fill, and rim lighting driven by neon colors,
 - visible atmosphere and drifting particles tuned for mood rather than minimalism,
 - brighter holographic junction posts,
 - projectile, muzzle, impact, and armor-hit energy flashes,
@@ -107,6 +113,7 @@ The training scene receives a cleaner calibration-lab version of the same style:
 
 - dark test-lab floor and measured aiming lanes,
 - controlled but visually rich cyan accents,
+- dim ambient/sun exposure so calibration lights and target glow dominate,
 - holographic calibration grids and target-range markings,
 - strong target silhouette,
 - readable training UI,
