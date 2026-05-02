@@ -77,6 +77,23 @@ message OracleHints {
     bool    target_visible        = 3;
 }
 
+// Optional team/backend-only telemetry emitted by the Unity training ground.
+// This supports non-player opponent policy development and should not be wired
+// into student homework tasks.
+message TrainingTelemetry {
+    uint64  stamp_ns              = 1;
+    Vector3 target_position_world = 2;
+    Vector3 target_velocity_world = 3;
+    double  target_yaw_world      = 4;
+    double  target_yaw_rate       = 5;
+    uint32  damage_dealt          = 6;
+    uint32  projectiles_fired     = 7;
+    uint32  armor_hits            = 8;
+    float   player_hit_rate       = 9;
+    double  step_reward           = 10;
+    bool    episode_done          = 11;
+}
+
 message SensorBundle {
     FrameRef     frame        = 1;
     Imu          imu          = 2;
@@ -85,6 +102,9 @@ message SensorBundle {
 
     // Present only if EnvReset was called with oracle_hints=true.
     OracleHints  oracle       = 5;
+
+    // Present only for backend training-ground runs.
+    TrainingTelemetry training = 6;
 }
 
 // Outbound from the candidate's stack to the simulator.

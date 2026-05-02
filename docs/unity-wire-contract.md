@@ -49,6 +49,19 @@ Required runner fields:
 | `opponent_tier` | string | Currently `"bronze"`, `"silver"`, or `"gold"`; only bronze is implemented. |
 | `oracle_hints` | bool | Enables ground-truth target pose in `SensorBundle.oracle` for tests. |
 | `duration_ns` | uint64 | Compatibility only. Unity ignores overrides and uses the fixed 5-minute rule duration. |
+| `training_config` | object | Optional team/backend-only controls for non-player opponent policy development. Student runners should omit this field. |
+
+`training_config` is used for the solitary-game backend, where non-player
+vehicles are driven by baseline or uploaded team policies. It is not homework
+surface area, and students are not expected to train vehicle RL policies.
+
+| `training_config` field | Type | Notes |
+|-------------------------|------|-------|
+| `enabled` | bool | Enables training-ground helpers. |
+| `target_translation_speed_mps` | double | Target ping-pong speed in meters per second; negative values should be clamped by Unity. |
+| `target_rotation_speed_rad_s` | double | Target chassis yaw speed in radians per second. |
+| `target_path_half_extent_m` | double | Half-width of the target ping-pong path around its spawn point. |
+| `baseline_opponent_enabled` | bool | Enables the geometric-center backend baseline opponent. |
 
 `env_step` maps to `GimbalCmd` and returns `SensorBundle`.
 
@@ -86,8 +99,14 @@ Every `SensorBundle` contains:
 | `gimbal` | Current yaw, pitch, yaw rate, pitch rate, plus `stamp_ns`. |
 | `odom` | Blue chassis world position, linear velocity, yaw, plus `stamp_ns`. |
 | `oracle` | Present only when `oracle_hints=true`. |
+| `training` | Present only in backend training-ground runs; contains target motion, hit metrics, reward, and episode status for non-player policy development. |
 
 Simulation timestamps are nanoseconds since the latest `env_reset`.
+
+`SensorBundle.training` is intentionally backend-only telemetry. It supports
+team-side policy training and smoke checks for non-player agents; candidate
+assignments should continue to rely on `frame`, `gimbal`, `odom`, and optional
+`oracle` test hints.
 
 ## Compatibility Gates
 

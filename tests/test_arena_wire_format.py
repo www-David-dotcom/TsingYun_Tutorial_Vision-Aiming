@@ -78,6 +78,28 @@ def test_env_reset_request_parses() -> None:
     assert req.duration_ns == 300_000_000_000
 
 
+def test_training_config_parses_for_backend_opponents() -> None:
+    payload = {
+        "seed": 42,
+        "opponent_tier": "bronze",
+        "oracle_hints": True,
+        "duration_ns": 300_000_000_000,
+        "training_config": {
+            "enabled": True,
+            "target_translation_speed_mps": 1.25,
+            "target_rotation_speed_rad_s": 2.0,
+            "target_path_half_extent_m": 2.5,
+            "baseline_opponent_enabled": True,
+        },
+    }
+    req = json_format.ParseDict(payload, aiming_pb2.EnvResetRequest())
+    assert req.training_config.enabled is True
+    assert req.training_config.target_translation_speed_mps == pytest.approx(1.25)
+    assert req.training_config.target_rotation_speed_rad_s == pytest.approx(2.0)
+    assert req.training_config.target_path_half_extent_m == pytest.approx(2.5)
+    assert req.training_config.baseline_opponent_enabled is True
+
+
 def test_gimbal_cmd_parses() -> None:
     payload = {"stamp_ns": 1_000, "target_yaw": 0.5, "target_pitch": -0.25,
                "yaw_rate_ff": 0.1, "pitch_rate_ff": 0.0}
@@ -109,6 +131,34 @@ def test_sensor_bundle_with_oracle_parses() -> None:
     assert bundle.HasField("oracle")
     assert bundle.oracle.target_position_world.x == pytest.approx(3.0)
     assert bundle.oracle.target_visible is True
+
+
+def test_sensor_bundle_with_training_telemetry_parses() -> None:
+    payload = _unity_bundle(oracle=True, frame_id=3)
+    payload["training"] = {
+        "stamp_ns": 48_000_000,
+        "target_position_world": {"x": 3.5, "y": 0.0, "z": 0.25},
+        "target_velocity_world": {"x": 0.5, "y": 0.0, "z": 0.0},
+        "target_yaw_world": 1.25,
+        "target_yaw_rate": 2.0,
+        "damage_dealt": 40,
+        "projectiles_fired": 6,
+        "armor_hits": 2,
+        "player_hit_rate": 0.33333334,
+        "step_reward": 0.4,
+        "episode_done": False,
+    }
+    bundle = json_format.ParseDict(payload, sensor_pb2.SensorBundle())
+    assert bundle.training.target_position_world.x == pytest.approx(3.5)
+    assert bundle.training.target_velocity_world.x == pytest.approx(0.5)
+    assert bundle.training.target_yaw_world == pytest.approx(1.25)
+    assert bundle.training.target_yaw_rate == pytest.approx(2.0)
+    assert bundle.training.damage_dealt == 40
+    assert bundle.training.projectiles_fired == 6
+    assert bundle.training.armor_hits == 2
+    assert bundle.training.player_hit_rate == pytest.approx(1.0 / 3.0)
+    assert bundle.training.step_reward == pytest.approx(0.4)
+    assert bundle.training.episode_done is False
 
 
 def test_initial_state_parses() -> None:

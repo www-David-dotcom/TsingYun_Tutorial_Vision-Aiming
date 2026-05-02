@@ -78,6 +78,48 @@ TEST(ProtoRoundtrip, EnvResetRequestSeedDoesNotCollapseToInt32) {
     EXPECT_TRUE(out.oracle_hints());
 }
 
+TEST(ProtoRoundtrip, TrainingFieldsSurviveRoundTrip) {
+    tsingyun_v1::EnvResetRequest req;
+    req.set_seed(42);
+    req.set_opponent_tier("bronze");
+    req.mutable_training_config()->set_enabled(true);
+    req.mutable_training_config()->set_target_translation_speed_mps(1.25);
+    req.mutable_training_config()->set_target_rotation_speed_rad_s(2.0);
+    req.mutable_training_config()->set_target_path_half_extent_m(2.5);
+    req.mutable_training_config()->set_baseline_opponent_enabled(true);
+
+    auto req_out = RoundTrip(req);
+    EXPECT_TRUE(req_out.training_config().enabled());
+    EXPECT_DOUBLE_EQ(req_out.training_config().target_translation_speed_mps(), 1.25);
+    EXPECT_DOUBLE_EQ(req_out.training_config().target_rotation_speed_rad_s(), 2.0);
+    EXPECT_DOUBLE_EQ(req_out.training_config().target_path_half_extent_m(), 2.5);
+    EXPECT_TRUE(req_out.training_config().baseline_opponent_enabled());
+
+    tsingyun_v1::SensorBundle bundle;
+    bundle.mutable_training()->mutable_target_position_world()->set_x(3.5);
+    bundle.mutable_training()->mutable_target_velocity_world()->set_x(0.5);
+    bundle.mutable_training()->set_target_yaw_world(1.25);
+    bundle.mutable_training()->set_target_yaw_rate(2.0);
+    bundle.mutable_training()->set_damage_dealt(40);
+    bundle.mutable_training()->set_projectiles_fired(6);
+    bundle.mutable_training()->set_armor_hits(2);
+    bundle.mutable_training()->set_player_hit_rate(1.0f / 3.0f);
+    bundle.mutable_training()->set_step_reward(0.4);
+    bundle.mutable_training()->set_episode_done(false);
+
+    auto bundle_out = RoundTrip(bundle);
+    EXPECT_DOUBLE_EQ(bundle_out.training().target_position_world().x(), 3.5);
+    EXPECT_DOUBLE_EQ(bundle_out.training().target_velocity_world().x(), 0.5);
+    EXPECT_DOUBLE_EQ(bundle_out.training().target_yaw_world(), 1.25);
+    EXPECT_DOUBLE_EQ(bundle_out.training().target_yaw_rate(), 2.0);
+    EXPECT_EQ(bundle_out.training().damage_dealt(), 40u);
+    EXPECT_EQ(bundle_out.training().projectiles_fired(), 6u);
+    EXPECT_EQ(bundle_out.training().armor_hits(), 2u);
+    EXPECT_NEAR(bundle_out.training().player_hit_rate(), 1.0f / 3.0f, 1e-6f);
+    EXPECT_NEAR(bundle_out.training().step_reward(), 0.4, 1e-6);
+    EXPECT_FALSE(bundle_out.training().episode_done());
+}
+
 TEST(ProtoRoundtrip, EpisodeStatsEvents) {
     tsingyun_v1::EpisodeStats s;
     s.set_episode_id("e-0001");

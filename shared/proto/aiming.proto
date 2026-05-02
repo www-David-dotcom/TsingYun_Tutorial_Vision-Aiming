@@ -46,6 +46,18 @@ message EnvResetRequest {
     // Compatibility field from older harnesses. The Unity match duration is
     // fixed by schema.md at 5 minutes; simulators should ignore overrides.
     uint64 duration_ns = 4;
+
+    // Team/backend-only training controls for generating and validating
+    // non-player opponent policies. Student runners should omit this field.
+    TrainingConfig training_config = 5;
+}
+
+message TrainingConfig {
+    bool enabled = 1;
+    double target_translation_speed_mps = 2;
+    double target_rotation_speed_rad_s = 3;
+    double target_path_half_extent_m = 4;
+    bool baseline_opponent_enabled = 5;
 }
 
 message InitialState {
