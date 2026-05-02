@@ -64,10 +64,9 @@ TEST(HW43DWithDrag, NearTargetHitRateIsHigh) {
     auto params = ProjectileParams::rm_17mm();
     int hits = 0;
     int trials = 0;
-    // Sweep target placements within 5 m. The 5 m, 10 m, 15 m hit-rate
-    // bars from IMPLEMENTATION_PLAN.md Stage 6 are not pinned here —
-    // they require the full dispersion + heat model — but a static
-    // target at <= 5 m should hit ~100% of the time.
+    // Sweep target placements within 5 m. Longer-range hit-rate bars require
+    // the full dispersion + heat model, but a static target at <= 5 m should
+    // hit ~100% of the time.
     for (double dx = 2.0; dx <= 5.0; dx += 0.5) {
         for (double dy = -1.5; dy <= 1.5; dy += 0.5) {
             ++trials;

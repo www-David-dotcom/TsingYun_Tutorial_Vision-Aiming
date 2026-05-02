@@ -1,5 +1,21 @@
 # HW5 — MPC 云台控制器 / MPC Gimbal Controller
 
+> **Status:** Active as part of the Unity-first assignment path; older
+> standalone workflows in this folder are legacy reference.
+>
+> **Unity-first role:** Track yaw and pitch commands with PID baseline and
+> optional MPC.
+>
+> **Legacy-only:** acados generation is team-side or optional; PID and cost
+> mini-tests are the candidate baseline.
+>
+> **Mini-test:** `ctest --preset linux-debug -R hw5` and `uv run pytest HW5_mpc_gimbal/tests/public/test_cost.py`
+>
+> **Mini-test files:**
+> - `HW5_mpc_gimbal/tests/public/test_cost.py`
+> - `HW5_mpc_gimbal/tests/public/test_step_response.cpp`
+> - `HW5_mpc_gimbal/tests/public/test_sinusoid_tracking.cpp`
+
 > 第五道作业：用 MPC 控制两轴云台。模型在 CasADi 里写，
 > 通过 acados 代码生成成 C 库，然后 C++ 运行时调它。还提供了一个
 > PID 基线作为下限——你的 MPC 必须在跟踪指标上击败它。
@@ -13,6 +29,45 @@
 > MPC must beat on tracking RMSE.
 
 ---
+
+## Student Quickstart
+
+### Prerequisites
+
+- Complete the root [First-time setup](../README.md#first-time-setup).
+- Use the Docker toolchain for C++ PID baseline mini-tests.
+- Install HW5 Python dependencies with `uv sync --group hw5` for CasADi model
+  checks.
+
+### What to implement
+
+Fill the `TODO(HW5):` sites in:
+
+- `HW5_mpc_gimbal/src/model.py`
+- `HW5_mpc_gimbal/source/controller.cpp`
+
+Most candidates should complete the CasADi model first. The acados C++ solver
+wire-up is optional unless your team has provided the generated solver bundle.
+
+### Mini-test command
+
+```bash
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug -R hw5
+uv run pytest HW5_mpc_gimbal/tests/public/test_cost.py
+```
+
+### Expected first run
+
+The PID baseline C++ tests should pass on a fresh checkout. The Python cost
+test checks the filled cost helpers. Model TODO checks become meaningful after
+you run `uv run python HW5_mpc_gimbal/src/generate_acados.py --check`.
+
+### Before moving on
+
+Run both the C++ `ctest` command and the Python `pytest` command. If you worked
+on the optional MPC path, also run the acados generation check.
 
 ## 多语言 / Multi-language structure
 
@@ -35,7 +90,6 @@ HW5_mpc_gimbal/
 ├── tests/public/
 │   ├── test_step_response.cpp     ← PID baseline: settling < 200ms, overshoot < 5%
 │   └── test_sinusoid_tracking.cpp ← PID baseline: RMSE < 0.05 rad on 1 Hz / 0.5 rad
-└── docs/visual_review_2026-04-29.md ← engine quality gate template
 ```
 
 ---
@@ -134,7 +188,4 @@ config flag.
   codegen; no Bayesian-opt loop).
 * Hardware-in-the-loop on a real gimbal — production team's concern.
 * CUDA EP — acados is CPU only.
-* Hidden grading episodes — deferred per `IMPLEMENTATION_PLAN.md`
-  Stage 10.
-* Engine quality gate (Godot → Unity port) — separately tracked in
-  `docs/visual_review_2026-04-29.md`.
+* Hidden grading episodes — grading must be redesigned from `schema.md`.

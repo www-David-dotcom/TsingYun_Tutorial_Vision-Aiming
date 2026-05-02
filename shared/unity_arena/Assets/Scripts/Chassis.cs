@@ -12,18 +12,18 @@ namespace TsingYun.UnityArena
     // scene.
     public class ChassisHpState
     {
-        public int MaxHp = 200;
+        public int MaxHp = GameConstants.VehicleHpOneVsOne;
         public int Hp;
 
         public void Reset() { Hp = MaxHp; }
         public void ApplyDamage(int amount) { Hp = Mathf.Max(0, Hp - amount); }
+        public void Heal(int amount) { Hp = Mathf.Min(MaxHp, Hp + Mathf.Max(0, amount)); }
         public bool IsDestroyed => Hp <= 0;
     }
 
     // Mecanum chassis with a custom velocity solver (NOT Rigidbody-driven).
     // Movement is via CharacterController.Move so PhysX integration drift
-    // cannot creep into chassis kinematics over a 90-second episode (R3
-    // mitigation per the design spec). Ports chassis.gd line-by-line.
+    // cannot creep into chassis kinematics over a full match.
     [RequireComponent(typeof(CharacterController))]
     public class Chassis : MonoBehaviour
     {
@@ -35,9 +35,9 @@ namespace TsingYun.UnityArena
         public int Number = 3;
         // Per-robot HP pool. All four plates feed damage into this; the
         // plates themselves carry no HP.
-        public int MaxHp = 200;
-        [Range(0f, 4f)] public float MaxLinearSpeed = 3.5f;
-        [Range(0f, 8f)] public float MaxAngularSpeed = 4.0f;
+        public int MaxHp = GameConstants.VehicleHpOneVsOne;
+        [Range(0f, 4f)] public float MaxLinearSpeed = GameConstants.ChassisMaxLinearSpeed;
+        [Range(0f, 8f)] public float MaxAngularSpeed = GameConstants.ChassisMaxAngularSpeed;
 
         public int DamageTaken { get; private set; }
         public int Hp => _hp.Hp;
@@ -46,13 +46,15 @@ namespace TsingYun.UnityArena
         public Vector3 LinearVelocity { get; private set; }
         public float ChassisYaw => _solver?.ChassisYaw ?? 0f;
 
-        public event Action<string, int, int> ArmorHit;  // plateId, damage, sourceId
+        public event Action<string, int, string> ArmorHit;  // plateId, damage, sourceTeam
 
         private MecanumChassisController _solver;
         private CharacterController _controller;
         private ArmorPlate[] _plates;
         private StickerLoader _stickerLoader;
         private ChassisHpState _hp;
+        private Transform _bodyRoot;
+        private float _fixedMountYaw;
 
         private void Awake()
         {
@@ -66,7 +68,37 @@ namespace TsingYun.UnityArena
             _stickerLoader = GetComponent<StickerLoader>();
             _hp = new ChassisHpState { MaxHp = MaxHp };
             _hp.Reset();
+            _bodyRoot = EnsureBodyRoot();
             AssignArmorMetadata();
+        }
+
+        private Transform EnsureBodyRoot()
+        {
+            Transform existing = transform.Find("ChassisBodyRoot");
+            if (existing != null) return existing;
+
+            var bodyRoot = new GameObject("ChassisBodyRoot").transform;
+            bodyRoot.SetParent(transform, false);
+
+            var movableChildren = new[]
+            {
+                "Pedestal",
+                "WheelFL",
+                "WheelFR",
+                "WheelRL",
+                "WheelRR",
+                "ArmorPlateFront",
+                "ArmorPlateBack",
+                "ArmorPlateLeft",
+                "ArmorPlateRight",
+            };
+            foreach (string childName in movableChildren)
+            {
+                Transform child = transform.Find(childName);
+                if (child != null) child.SetParent(bodyRoot, true);
+            }
+
+            return bodyRoot;
         }
 
         private void AssignArmorMetadata()
@@ -81,7 +113,7 @@ namespace TsingYun.UnityArena
             var found = new List<ArmorPlate>();
             foreach (var f in faces)
             {
-                var child = transform.Find(f.ChildName);
+                var child = FindDescendant(f.ChildName);
                 if (child == null)
                 {
                     Debug.LogWarning($"Chassis {Team}: missing armor child {f.ChildName}");
@@ -98,8 +130,21 @@ namespace TsingYun.UnityArena
             _plates = found.ToArray();
         }
 
+        private Transform FindDescendant(string childName)
+        {
+            Transform direct = transform.Find(childName);
+            if (direct != null) return direct;
+            return _bodyRoot != null ? _bodyRoot.Find(childName) : null;
+        }
+
         public void SetChassisCmd(float vxBody, float vyBody, float omega)
         {
+            if (IsDestroyed)
+            {
+                _solver.SetCmd(0f, 0f, 0f);
+                LinearVelocity = Vector3.zero;
+                return;
+            }
             _solver.SetCmd(vxBody, vyBody, omega);
         }
 
@@ -108,6 +153,8 @@ namespace TsingYun.UnityArena
             _controller.enabled = false;
             transform.position = spawnPosition;
             transform.rotation = Quaternion.Euler(0f, spawnYaw * Mathf.Rad2Deg, 0f);
+            _fixedMountYaw = spawnYaw;
+            if (_bodyRoot != null) _bodyRoot.localRotation = Quaternion.identity;
             _controller.enabled = true;
             _solver.Reset(spawnYaw);
             DamageTaken = 0;
@@ -129,11 +176,32 @@ namespace TsingYun.UnityArena
             if (_stickerLoader != null) _stickerLoader.LoadStickerForCurrentNumber();
         }
 
+        public void Heal(float seconds)
+        {
+            MatchRules.ApplyHealing(_hp, seconds);
+            RefreshArmorGlow();
+        }
+
+        public void RespawnAt(Vector3 position, float yaw)
+        {
+            int cumulativeDamageTaken = DamageTaken;
+            ResetForNewEpisode(position, yaw);
+            DamageTaken = cumulativeDamageTaken;
+        }
+
+        public void ApplyArmorHitDamage(string face, int damage, string sourceTeam)
+        {
+            string normalizedFace = string.IsNullOrEmpty(face) ? "front" : face;
+            RaiseArmorHit($"{Team}.{normalizedFace}", damage, sourceTeam);
+        }
+
         private void FixedUpdate()
         {
+            if (IsDestroyed) return;
             float dt = Time.fixedDeltaTime;
             _solver.IntegrateStep(dt);
-            transform.rotation = Quaternion.Euler(0f, _solver.ChassisYaw * Mathf.Rad2Deg, 0f);
+            float bodyYaw = MecanumChassisController.BodyLocalYaw(_fixedMountYaw, _solver.ChassisYaw);
+            if (_bodyRoot != null) _bodyRoot.localRotation = Quaternion.Euler(0f, bodyYaw * Mathf.Rad2Deg, 0f);
             LinearVelocity = _solver.WorldVelocity;
             // Y-component stays zero (flat floor); gravity not applied to chassis here.
             _controller.Move(LinearVelocity * dt);
@@ -158,16 +226,24 @@ namespace TsingYun.UnityArena
             };
         }
 
-        protected void RaiseArmorHit(string plateId, int damage, int sourceId)
+        protected void RaiseArmorHit(string plateId, int damage, string sourceTeam)
         {
+            if (IsDestroyed) return;
             DamageTaken += damage;
             _hp.ApplyDamage(damage);
-            float t = _hp.MaxHp > 0 ? (float)_hp.Hp / _hp.MaxHp : 0f;
-            if (_plates != null)
+            if (IsDestroyed && Gimbal != null)
             {
-                foreach (var p in _plates) p.RefreshGlow(t);
+                Gimbal.HoldCurrentPose();
             }
-            ArmorHit?.Invoke($"{Team}.{plateId.Split('.')[1]}", damage, sourceId);
+            RefreshArmorGlow();
+            ArmorHit?.Invoke($"{Team}.{plateId.Split('.')[1]}", damage, sourceTeam);
+        }
+
+        private void RefreshArmorGlow()
+        {
+            float t = _hp.MaxHp > 0 ? (float)_hp.Hp / _hp.MaxHp : 0f;
+            if (_plates == null) return;
+            foreach (var p in _plates) p.RefreshGlow(t);
         }
 
         private static Dictionary<string, object> Vec3Dict(Vector3 v) => new Dictionary<string, object>

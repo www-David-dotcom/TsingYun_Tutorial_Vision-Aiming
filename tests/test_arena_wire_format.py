@@ -1,13 +1,11 @@
-"""Engine-agnostic wire-format conformance for the Aiming Arena.
+"""Unity wire-format conformance for the Aiming Arena.
 
-Mirrors both the GDScript (arena_main.gd) and the C#
-(unity_arena/Assets/Scripts/ArenaMain.cs) sensor-bundle dict shapes,
-asserting that each round-trips through google.protobuf.json_format.
+Mirrors unity_arena/Assets/Scripts/ArenaMain.cs sensor-bundle dict shapes,
+asserting that they round-trip through google.protobuf.json_format.
 
-This test does NOT spin up either simulator. It hand-constructs the
-dict shapes that each engine's source is documented to emit. If the
-test drifts from the source, the matching test breaks first; the
-engine's source is the source of truth.
+This test does NOT spin up Unity. It hand-constructs the dict shape that
+ArenaMain.cs is documented to emit. If the test drifts from the source, this
+test should break first; the Unity source is the source of truth.
 """
 
 from __future__ import annotations
@@ -28,10 +26,10 @@ sensor_pb2 = proto_codegen.import_pb2("sensor")
 episode_pb2 = proto_codegen.import_pb2("episode")
 
 
-# --------------------------------------------------------- engine helpers
+# ----------------------------------------------------------- Unity helper
 
-def _godot_bundle(*, oracle: bool, frame_id: int = 0) -> dict:
-    """Mirror of arena_main.gd::_build_sensor_bundle."""
+def _unity_bundle(*, oracle: bool, frame_id: int = 0) -> dict:
+    """Mirror of ArenaMain.cs::BuildSensorBundle."""
     bundle = {
         "frame": {
             "frame_id": frame_id,
@@ -70,34 +68,14 @@ def _godot_bundle(*, oracle: bool, frame_id: int = 0) -> dict:
     return bundle
 
 
-def _unity_bundle(*, oracle: bool, frame_id: int = 0) -> dict:
-    """Mirror of ArenaMain.cs::BuildSensorBundle.
-
-    The Unity build emits long ints for stamp_ns / frame_id / width / height
-    (System.Int64), but JSON serialization writes them as JSON integers
-    indistinguishable from Godot's. The shape is identical.
-    """
-    return _godot_bundle(oracle=oracle, frame_id=frame_id)
-
-
-_BUNDLE_BUILDERS = {"godot": _godot_bundle, "unity": _unity_bundle}
-
-
-# ---------------------------------------------------------- parametrized
-
-@pytest.fixture(params=["godot", "unity"])
-def bundle_builder(request):
-    return _BUNDLE_BUILDERS[request.param]
-
-
 def test_env_reset_request_parses() -> None:
     payload = {"seed": 42, "opponent_tier": "bronze", "oracle_hints": True,
-               "duration_ns": 90_000_000_000}
+               "duration_ns": 300_000_000_000}
     req = json_format.ParseDict(payload, aiming_pb2.EnvResetRequest())
     assert req.seed == 42
     assert req.opponent_tier == "bronze"
     assert req.oracle_hints is True
-    assert req.duration_ns == 90_000_000_000
+    assert req.duration_ns == 300_000_000_000
 
 
 def test_gimbal_cmd_parses() -> None:
@@ -114,8 +92,8 @@ def test_fire_cmd_parses() -> None:
     assert cmd.burst_count == 3
 
 
-def test_sensor_bundle_without_oracle_parses(bundle_builder) -> None:
-    payload = bundle_builder(oracle=False, frame_id=0)
+def test_sensor_bundle_without_oracle_parses() -> None:
+    payload = _unity_bundle(oracle=False, frame_id=0)
     bundle = json_format.ParseDict(payload, sensor_pb2.SensorBundle())
     assert bundle.frame.width == 1280
     assert bundle.frame.height == 720
@@ -125,18 +103,18 @@ def test_sensor_bundle_without_oracle_parses(bundle_builder) -> None:
     assert not bundle.HasField("oracle")
 
 
-def test_sensor_bundle_with_oracle_parses(bundle_builder) -> None:
-    payload = bundle_builder(oracle=True, frame_id=1)
+def test_sensor_bundle_with_oracle_parses() -> None:
+    payload = _unity_bundle(oracle=True, frame_id=1)
     bundle = json_format.ParseDict(payload, sensor_pb2.SensorBundle())
     assert bundle.HasField("oracle")
     assert bundle.oracle.target_position_world.x == pytest.approx(3.0)
     assert bundle.oracle.target_visible is True
 
 
-def test_initial_state_parses(bundle_builder) -> None:
+def test_initial_state_parses() -> None:
     sim_sha = "stage12a-unity-scaffold-1.6"
     payload = {
-        "bundle": bundle_builder(oracle=False, frame_id=0),
+        "bundle": _unity_bundle(oracle=False, frame_id=0),
         "zmq_frame_endpoint": "tcp://127.0.0.1:7655",
         "simulator_build_sha256": sim_sha,
     }
@@ -155,24 +133,27 @@ def test_fire_result_parses() -> None:
 def test_episode_stats_with_events_parses() -> None:
     payload = {
         "episode_id": "ep-000000000000002a", "seed": 42,
-        "duration_ns": 90_000_000_000,
+        "duration_ns": 300_000_000_000,
         "candidate_commit_sha": "", "candidate_build_sha256": "",
         "simulator_build_sha256": "stage12a-unity-scaffold-1.6",
         "opponent_policy_sha256": "", "opponent_tier": "bronze",
         "outcome": "OUTCOME_TIMEOUT",
         "damage_dealt": 200, "damage_taken": 100,
         "projectiles_fired": 8, "armor_hits": 4,
+        "player_hit_rate": 0.5, "team_hit_rate": 0.5,
         "aim_latency_p50_ns": 8_000_000,
         "aim_latency_p95_ns": 20_000_000,
         "aim_latency_p99_ns": 28_000_000,
         "events": [
             {"stamp_ns": 1_000_000, "kind": "KIND_FIRED", "armor_id": "", "damage": 0},
-            {"stamp_ns": 1_500_000, "kind": "KIND_HIT_ARMOR", "armor_id": "red.front", "damage": 50},
+            {"stamp_ns": 1_500_000, "kind": "KIND_HIT_ARMOR", "armor_id": "red.front", "damage": 20},
         ],
     }
     msg = json_format.ParseDict(payload, episode_pb2.EpisodeStats())
     assert msg.outcome == episode_pb2.EpisodeStats.OUTCOME_TIMEOUT
     assert msg.armor_hits == 4
+    assert msg.player_hit_rate == pytest.approx(0.5)
+    assert msg.team_hit_rate == pytest.approx(0.5)
     assert len(msg.events) == 2
     assert msg.events[0].kind == episode_pb2.ProjectileEvent.KIND_FIRED
     assert msg.events[1].kind == episode_pb2.ProjectileEvent.KIND_HIT_ARMOR
@@ -181,7 +162,7 @@ def test_episode_stats_with_events_parses() -> None:
 
 def test_length_prefix_round_trip() -> None:
     """Sanity-check the 4-byte big-endian length prefix used by
-    tcp_proto_server.gd.
+    TcpProtoServer.cs.
 
     Both sides hand-encode the prefix; any mismatch (BE vs LE, signed
     vs unsigned, off-by-one) produces a hung connection at runtime.

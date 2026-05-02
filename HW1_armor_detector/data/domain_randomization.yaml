@@ -1,14 +1,13 @@
 # Domain randomization knobs for the HW1 dataset dumper.
 #
-# Both the synthetic-PIL backend and the godot-driven backend honour
-# this config; per-sample values are drawn uniformly within the listed
-# ranges using the same SeedRng-style determinism as the arena (one
-# numpy.Generator per dataset, seeded by `--seed`).
+# The synthetic-PIL dumper honors this config; per-sample values are drawn
+# uniformly within the listed ranges using one numpy.Generator per dataset,
+# seeded by `--seed`.
 
 image:
   width: 1280
   height: 720
-  fps: 60                       # only used by the godot backend
+  fps: 60                       # reference frame rate for future Unity dumps
 
 # How many plates to place per synthetic frame. Real-world frames have
 # 1-4 plates visible per robot * 1-2 robots; the upper bound matches.

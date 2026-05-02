@@ -6,10 +6,10 @@ Usage:
     uv run python shared/scripts/push_assets.py \\
         --bucket tsingyun-aiming-hw-public \\
         --visibility anonymous \\
-        --key binaries/v0.5.0/godot/aiming_arena_linux_x86_64.zip \\
-        --name godot-arena-linux-x64 \\
+        --key builds/unity/0.1.0/aiming_arena_linux_x86_64.zip \\
+        --name unity-arena-linux-x64 \\
         --file out/builds/aiming_arena_linux_x86_64.zip \\
-        --description "Godot arena binary, Linux x86_64"
+        --description "Unity arena build, Linux x86_64"
 
 Computes sha256, uploads to OSS, then appends a TOML row to manifest.toml
 that downstream fetch_assets.py invocations will resolve.

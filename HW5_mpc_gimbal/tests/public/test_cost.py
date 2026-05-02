@@ -56,7 +56,7 @@ def test_yaw_error_dominates_quadratically() -> None:
                     [[0.1, 0, 0, 0, 0, 0], [0, 0], 0.0, 0.0])
     if val == pytest.approx(0.0):
         pytest.xfail("stage_cost_expression unimplemented "
-                     "— fill the TODO in src/cost.py")
+                     "- fill TODO(HW5): in src/cost.py")
     assert val == pytest.approx(1.0, rel=1e-6)
 
 

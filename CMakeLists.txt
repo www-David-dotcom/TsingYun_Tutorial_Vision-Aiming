@@ -53,10 +53,9 @@ endif()
 
 # --- subdirs ------------------------------------------------------------------
 
-# Stages 2+ progressively populate HW1..HW7 / shared/godot_arena. Each
-# per-HW CMakeLists is responsible for guarding its own optional deps
-# (e.g. HW1 skips itself when ONNX Runtime isn't installed) so a
-# partial environment still produces a green build.
+# HW1..HW7 are legacy reference modules. Each per-HW CMakeLists guards
+# its own optional deps (e.g. HW1 skips itself when ONNX Runtime isn't
+# installed) so a partial environment still produces a green build.
 
 enable_testing()
 add_subdirectory(tests)

@@ -507,7 +507,7 @@ MonoBehaviour:
   Team: blue
   ChassisId: 0
   Number: 3
-  MaxHp: 200
+  MaxHp: 300
   MaxLinearSpeed: 3.5
   MaxAngularSpeed: 4
 --- !u!114 &2824451090206270927

@@ -2,10 +2,8 @@ using UnityEngine;
 
 namespace TsingYun.UnityArena
 {
-    // Pure-C# quadratic-drag force solver for the projectile. Matches
-    // projectile.gd:_physics_process (lines 35-40). Extracted so the math is
-    // EditMode-testable; the full Projectile MonoBehaviour (with Rigidbody,
-    // OnCollisionEnter, lifetime caps) is added in Stage 12b.
+    // Pure-C# quadratic-drag force solver for the projectile. Extracted so the
+    // math is EditMode-testable.
     public static class ProjectileDragSolver
     {
         public const float DragCoefficient = 0.47f;       // sphere
@@ -13,7 +11,7 @@ namespace TsingYun.UnityArena
         public const float FrontalArea = 0.000227f;        // π * 0.0085^2
         public const float MaxRangeM = 30.0f;
         public const float MaxTtlSeconds = 4.0f;
-        public const int Damage = 50;
+        public const int Damage = GameConstants.BulletDamage;
 
         public static Vector3 QuadraticDragForce(Vector3 velocity)
         {
@@ -27,7 +25,7 @@ namespace TsingYun.UnityArena
     // 17 mm-style ball projectile. Quadratic drag is applied per FixedUpdate
     // (Rigidbody.linearDamping is exponential decay, which is wrong for a real
     // projectile). Gravity comes from the engine. Lifetime caps: MaxRangeM
-    // (30 m) and MaxTtlSeconds (4 s). Mirrors projectile.gd.
+    // (30 m) and MaxTtlSeconds (4 s).
     [RequireComponent(typeof(Rigidbody))]
     public class Projectile : MonoBehaviour
     {
@@ -63,11 +61,6 @@ namespace TsingYun.UnityArena
         public int OnArmorHit(ArmorPlate plate)
         {
             if (Consumed) return 0;
-            if (plate.Team == Team)
-            {
-                Consume("friendly");
-                return 0;
-            }
             Consume($"hit_armor:{plate.PlateId}");
             return ProjectileDragSolver.Damage;
         }

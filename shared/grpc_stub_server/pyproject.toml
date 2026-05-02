@@ -1,7 +1,7 @@
 [project]
 name = "grpc-stub-server"
 version = "0.5.0"
-description = "Stand-in gRPC server that speaks aiming.proto until the Godot arena lands in stage 2"
+description = "Stand-in gRPC server that speaks aiming.proto without launching Unity"
 requires-python = ">=3.11"
 
 dependencies = [

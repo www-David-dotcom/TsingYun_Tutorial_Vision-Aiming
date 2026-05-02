@@ -52,6 +52,8 @@ message EpisodeStats {
     uint32 damage_taken           = 11;
     uint32 projectiles_fired      = 12;
     uint32 armor_hits             = 13;  // subset of projectiles_fired that hit any armor
+    float  player_hit_rate        = 18;
+    float  team_hit_rate          = 19;
 
     // Latency from frame stamp to first acknowledged GimbalCmd, in nanoseconds.
     // p50 / p95 / p99 across the episode.

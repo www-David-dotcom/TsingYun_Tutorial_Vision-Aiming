@@ -45,5 +45,5 @@ the model. Committing it would either:
 * Pin a specific weight setting in git, which fights the candidate's
   iteration loop.
 
-OSS-hosted with a SHA-256 in the manifest is the same pattern Stage 1
-uses for the Godot binaries.
+OSS-hosted with a SHA-256 in the manifest is the same pattern used for
+large generated assets.

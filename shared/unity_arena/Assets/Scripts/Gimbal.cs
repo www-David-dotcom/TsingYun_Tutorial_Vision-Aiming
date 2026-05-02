@@ -4,14 +4,14 @@ namespace TsingYun.UnityArena
 {
     // Pure-C# gimbal kinematics: yaw around +Y, pitch around local +X of the
     // YawPivot. First-order motor lag rate-limits the slew so commanded targets
-    // don't snap. Mirrors gimbal.gd. Extracted so the math is EditMode-testable
+    // don't snap. Extracted so the math is EditMode-testable
     // without a scene running.
     public class GimbalKinematics
     {
         public const float YawRateLimit = 12.0f;     // rad/s
         public const float PitchRateLimit = 8.0f;    // rad/s
-        public const float PitchLimitLo = -0.35f;    // rad (~-20 deg)
-        public const float PitchLimitHi = 0.52f;     // rad (~+30 deg)
+        public const float PitchLimitLo = GameConstants.GimbalPitchMinRadians;
+        public const float PitchLimitHi = GameConstants.GimbalPitchMaxRadians;
         public const float MotorLagTc = 0.04f;       // s
 
         public float YawRad;
@@ -63,9 +63,16 @@ namespace TsingYun.UnityArena
             YawRateFf = PitchRateFf = 0f;
         }
 
+        public void HoldCurrentPose()
+        {
+            TargetYaw = YawRad;
+            TargetPitch = PitchRad;
+            YawRate = PitchRate = 0f;
+            YawRateFf = PitchRateFf = 0f;
+        }
+
         private static float WrapPi(float angle)
         {
-            // Match Godot's wrapf(x, -PI, PI).
             float twoPi = Mathf.PI * 2f;
             angle = (angle + Mathf.PI) % twoPi;
             if (angle < 0f) angle += twoPi;
@@ -82,10 +89,10 @@ namespace TsingYun.UnityArena
     }
 
     // MonoBehaviour wrapping GimbalKinematics. Drives YawPivot.localRotation
-    // and PitchPivot.localRotation in FixedUpdate. Mirrors gimbal.gd.
+    // and PitchPivot.localRotation in FixedUpdate.
     public class Gimbal : MonoBehaviour
     {
-        public const float MuzzleVelocity = 27.0f;
+        public const float MuzzleVelocity = GameConstants.BulletSpeedMetersPerSecond;
 
         public Transform YawPivot;
         public Transform PitchPivot;
@@ -104,6 +111,8 @@ namespace TsingYun.UnityArena
             => _k.SetTarget(yaw, pitch, yawFf, pitchFf);
 
         public void Reset() => _k.Reset();
+
+        public void HoldCurrentPose() => _k.HoldCurrentPose();
 
         public GimbalState GetState() => _k.GetState();
 

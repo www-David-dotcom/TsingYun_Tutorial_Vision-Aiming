@@ -113,7 +113,7 @@ namespace TsingYun.UnityArena
                 return new Dictionary<string, object> { { "ok", false }, { "error", ex.Message } };
             }
 
-            // Mirror arena_main.gd's _error sentinel: response dict with "_error" key indicates failure.
+            // Dispatcher response dicts with "_error" indicate failure.
             if (response is Dictionary<string, object> respDict && respDict.ContainsKey("_error"))
                 return new Dictionary<string, object> { { "ok", false }, { "error", respDict["_error"] } };
 

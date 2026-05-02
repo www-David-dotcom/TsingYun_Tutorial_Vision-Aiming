@@ -1,6 +1,6 @@
 #pragma once
 
-// Multi-target data association. Two TODO(HW3) targets:
+// Multi-target data association. Two TODO(HW3): targets:
 //   * `mahalanobis_cost` — the per-(track, detection) cost the
 //     assignment matrix is built from.
 //   * `hungarian_assign` — bipartite minimum-cost matching with a
@@ -33,7 +33,7 @@ constexpr double kGate99Dof2 = 9.21;
 // Mahalanobis distance (squared) between a track's predicted
 // measurement and an observation, under additive measurement noise R.
 //
-// IMPLEMENT THIS — TODO(HW3).
+// TODO(HW3): implement squared Mahalanobis distance.
 double mahalanobis_cost(const TrackBelief& track,
                         const MeasVec& detection,
                         const MeasMat& R);
@@ -43,7 +43,7 @@ double mahalanobis_cost(const TrackBelief& track,
 // cost exceeds `gate` are not eligible for a match. Unmatched tracks
 // and detections are simply omitted from the returned list.
 //
-// IMPLEMENT THIS — TODO(HW3).
+// TODO(HW3): implement gated Hungarian assignment.
 std::vector<AssignmentPair> hungarian_assign(
     const std::vector<std::vector<double>>& cost,
     double gate);

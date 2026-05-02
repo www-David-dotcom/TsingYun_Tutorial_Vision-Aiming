@@ -6,7 +6,7 @@
 // state shared between the producer (ZMQ subscriber) and the
 // consumer (control thread).
 //
-// One TODO(HW6) site, in source/runner.cpp::Runner::next_frame —
+// One TODO(HW6): site, in source/runner.cpp::Runner::next_frame -
 // the stale-frame drop policy.
 
 #include <atomic>
@@ -71,7 +71,7 @@ public:
 
     // Consumer side (control thread): pop the next freshest frame
     // honouring the stale-frame drop policy. Returns false if no
-    // usable frame is queued. The TODO is in the body.
+    // usable frame is queued. The blank is in the body.
     bool next_frame(Frame& out);
 
     // Convenience snapshot of the latest gimbal pose for the EKF.

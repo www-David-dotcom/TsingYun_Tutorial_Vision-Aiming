@@ -51,7 +51,7 @@ def test_empty_box_list_returns_zeros() -> None:
 def test_single_box_assigns_inside_cells() -> None:
     grid = _build_grid(20, 20)
     if _is_stub(grid):
-        pytest.xfail("assign_targets unimplemented — fill the TODO in losses.py")
+        pytest.xfail("assign_targets unimplemented - fill TODO(HW1): in losses.py")
     boxes = torch.tensor([[40.0, 60.0, 120.0, 140.0]])
     corners = torch.tensor([[40.0, 60.0, 120.0, 60.0, 120.0, 140.0, 40.0, 140.0]])
     icons = torch.tensor([2])

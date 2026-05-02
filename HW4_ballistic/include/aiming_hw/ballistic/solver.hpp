@@ -2,7 +2,7 @@
 
 // Ballistic aim-prediction solver.
 //
-// Two pieces, both candidate TODOs:
+// Two pieces, both candidate TODO(HW4): blanks:
 //
 //   1. `solve_flight_time` — given a muzzle direction + speed and a
 //      static target position, find the time-of-flight at which the
@@ -39,7 +39,7 @@ struct ShotPlan {
 // seconds; if the bullet never gets close (e.g. drag chokes it out
 // short of the target), returns -1.
 //
-// IMPLEMENT THIS — TODO(HW4).
+// TODO(HW4): implement flight-time solving.
 double solve_flight_time(const ProjectileParams& params,
                          const Eigen::Vector3d& muzzle_pos,
                          const Eigen::Vector3d& aim_direction,
@@ -52,7 +52,7 @@ double solve_flight_time(const ProjectileParams& params,
 // repeat until either the miss distance falls below `tolerance_m` or
 // `max_iterations` is exhausted.
 //
-// IMPLEMENT THIS — TODO(HW4).
+// TODO(HW4): implement iterative shot planning.
 ShotPlan plan_shot(const ProjectileParams& params,
                    const Eigen::Vector3d& muzzle_pos,
                    double muzzle_speed_mps,

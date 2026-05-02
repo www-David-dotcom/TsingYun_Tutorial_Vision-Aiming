@@ -20,13 +20,13 @@ namespace tf {
 // short-arc antipodal fix-up. `alpha == 0` returns `a`; `alpha == 1`
 // returns `b`. Out-of-range alpha is clamped.
 //
-// IMPLEMENT THIS — TODO(HW2).
+// TODO(HW2): implement transform interpolation.
 Transform interpolate(const Transform& a, const Transform& b, double alpha);
 
 // Compose two transforms so that `compose(parent_to_middle,
 // middle_to_child)` is the transform parent→child.
 //
-// IMPLEMENT THIS — TODO(HW2).
+// TODO(HW2): implement transform composition.
 Transform compose(const Transform& parent_to_middle,
                   const Transform& middle_to_child);
 

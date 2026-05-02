@@ -8,8 +8,7 @@
 // non_max_suppression.
 //
 // The session is set up with the CPU EP as the canonical target
-// (see IMPLEMENTATION_PLAN.md Stage 3 risk note); CUDA EP is left
-// as a future extension via `Inferer::Options::use_cuda`.
+// CUDA EP is left as a future extension via `Inferer::Options::use_cuda`.
 
 #include <cstdint>
 #include <memory>

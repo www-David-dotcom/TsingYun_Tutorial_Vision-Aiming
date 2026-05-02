@@ -1,5 +1,20 @@
 # HW1 — 装甲板与图标检测器 / Lightweight Armor & Icon Detector
 
+> **Status:** Active as part of the Unity-first assignment path; older
+> standalone workflows in this folder are legacy reference.
+>
+> **Unity-first role:** Detect armor plates and vehicle IDs from Unity camera
+> frames.
+>
+> **Legacy-only:** Synthetic PIL dataset generation is useful for local
+> training smoke tests, but final evaluation must use Unity-frame semantics.
+>
+> **Mini-test:** `uv run pytest HW1_armor_detector/tests/public/test_assign_targets.py HW1_armor_detector/tests/public/test_loss_shapes.py`
+>
+> **Mini-test files:**
+> - `HW1_armor_detector/tests/public/test_assign_targets.py`
+> - `HW1_armor_detector/tests/public/test_loss_shapes.py`
+
 > 第一道作业：在合成数据上训练一个轻量级检测器，导出 ONNX，
 > 用 ONNX Runtime（C++）跑推理。重点是**多任务损失的写法**和
 > **后处理（解码 + NMS）**，不在于追指标。
@@ -10,6 +25,45 @@
 > chasing mAP.
 
 ---
+
+## Student Quickstart
+
+### Prerequisites
+
+- Complete the root [First-time setup](../README.md#first-time-setup).
+- Install HW1 Python dependencies with `uv sync --group hw1`.
+- C++ inferer tests additionally need the Docker toolchain or a local CMake
+  setup with ONNX Runtime.
+
+### What to implement
+
+Fill the `TODO(HW1):` sites in:
+
+- `HW1_armor_detector/src/losses.py`
+- `HW1_armor_detector/src/train.py`
+- `HW1_armor_detector/source/inferer.cpp`
+- `HW1_armor_detector/source/post_process.cpp`
+
+Start with `assign_targets` and the Python loss functions before the C++
+post-processing path.
+
+### Mini-test command
+
+```bash
+uv run pytest HW1_armor_detector/tests/public/test_assign_targets.py HW1_armor_detector/tests/public/test_loss_shapes.py
+```
+
+### Expected first run
+
+Before you fill the blanks, some tests are expected to `xfail` because the
+candidate implementation is intentionally missing. After each `TODO(HW1):`
+block is filled, the related `xfail` should turn into a pass.
+
+### Before moving on
+
+Run the mini-test command from the repository root. If you also worked on the
+C++ post-processing, build inside the Docker toolchain and run
+`ctest --preset linux-debug -R hw1`.
 
 ## 目标 / Goals
 
@@ -32,21 +86,15 @@
 
 ## 数据 / Data
 
-Stage 3 ships two ways to get training data:
+The legacy HW1 workflow uses a synthetic local dataset:
 
-* **Synthetic, no Godot needed** —
-  `python data/dataset_dumper.py --frames 200 --out /tmp/ds`
-  draws procedural armor plates against random backgrounds (PIL only,
-  no engine dependency). Useful for unit-testing your dataloader and
-  loss without spinning Godot up.
-* **Live from the Stage-2 arena** —
-  `python data/dataset_dumper.py --source godot --host 127.0.0.1
-  --frames 5000 --out /tmp/ds`
-  drives the Godot arena over TCP, samples the oracle hints + frame
-  stream, and re-projects target world coords through the camera
-  intrinsics in `data/camera_intrinsics.yaml`. (Occlusion is **not**
-  raycast — a plate facing away from the camera is still labeled. See
-  the YAML for the heuristic.)
+```bash
+python data/dataset_dumper.py --frames 200 --out /tmp/ds
+```
+
+It draws procedural armor plates against random backgrounds with PIL only,
+with no live engine dependency. This is useful for unit-testing your
+dataloader and loss while the Unity-first assignment framework is redesigned.
 
 Domain-randomization knobs live in `data/domain_randomization.yaml`.
 Real-world holdout frames are pulled lazily via
@@ -118,5 +166,5 @@ correctness of the loss formulation and post-processing is.
 * Quantization / distillation (could become a future bonus).
 * CUDA EP for inferer (CPU EP is canonical; CUDA path is not gated by
   this assignment).
-* Hidden grading episodes — grading workflow is deferred per
-  `IMPLEMENTATION_PLAN.md` Stage 10 (resolved decisions 3 & 7).
+* Hidden grading episodes — the grading workflow must be redesigned from
+  `schema.md`.

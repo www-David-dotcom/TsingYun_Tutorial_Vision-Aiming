@@ -9,7 +9,7 @@
 // The Runner class (header + .cpp) provides the shared state and
 // stale-frame drop policy.
 //
-// Until the TODO is filled, `run_episode` only spins up the runner
+// Until the HW6 blank is filled, `run_episode` only spins up the runner
 // + watchdog, prints stats every second, and exits after the episode
 // duration. That's enough to verify the binary links, the watchdog
 // fires when the loop hangs, and the ring buffer's atomics behave
@@ -97,7 +97,7 @@ int run_episode(const CliArgs& args) {
     //     on the watchdog's polling thread); zeroing torque commands
     //     via atomic stores is safe.
     //
-    // Until the TODO is filled, we simulate the loop here in the main
+    // Until the HW6 blank is filled, we simulate the loop here in the main
     // thread and report stats — useful for the SPSC + watchdog tests
     // but not a real episode.
     std::atomic<bool> stop{false};

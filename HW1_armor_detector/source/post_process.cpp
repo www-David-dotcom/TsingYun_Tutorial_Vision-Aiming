@@ -8,7 +8,7 @@
 // Stage-3 post-processing: decode the raw head tensor to per-cell
 // detections, then class-aware NMS.
 //
-// Two TODO blocks. Read the comments in each and write the obvious
+// Two candidate blanks. Read the comments in each and write the obvious
 // implementation; both are short.
 
 namespace aiming_hw {

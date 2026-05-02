@@ -6,7 +6,7 @@
 // surface doesn't need them, and keeping the DSL small means the
 // dsl_to_cpp.py codegen is ~80 lines.
 //
-// The runtime itself is filled. The two TODO(HW7) sites live in
+// The runtime itself is filled. The two TODO(HW7): sites live in
 // `strategy.cpp` (target prioritisation + retreat trigger) and are
 // invoked by leaf actions.
 

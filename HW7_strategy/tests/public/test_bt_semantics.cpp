@@ -41,7 +41,7 @@ bool bt_tick_is_stub() {
 TEST(HW7BehaviourTree, SequenceAllSuccessReturnsSuccess) {
     if (bt_tick_is_stub()) {
         GTEST_SKIP() << "Sequence::tick / Selector::tick unimplemented "
-                        "— fill the TODOs in behavior_tree.hpp";
+                        "- fill TODO(HW7): in behavior_tree.hpp";
     }
     auto seq = sequence("root");
     seq->add(action("a", [](Blackboard&) { return Status::Success; }));

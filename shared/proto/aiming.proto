@@ -6,7 +6,7 @@ import "sensor.proto";
 import "episode.proto";
 
 // Top-level service the Aiming Arena simulator exposes. A candidate's
-// stack acts as the gRPC client; the simulator (Godot or Unity) is the
+// stack acts as the gRPC client; the Unity simulator is the
 // server. See schema §3 for the full architecture diagram.
 
 service AimingArena {
@@ -43,7 +43,8 @@ message EnvResetRequest {
     // this false.
     bool oracle_hints = 3;
 
-    // Wall-clock duration cap. Defaults to 90 s if zero.
+    // Compatibility field from older harnesses. The Unity match duration is
+    // fixed by schema.md at 5 minutes; simulators should ignore overrides.
     uint64 duration_ns = 4;
 }
 

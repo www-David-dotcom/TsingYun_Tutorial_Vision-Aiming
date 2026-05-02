@@ -6,8 +6,8 @@
 // query without rolling their own integrator.
 //
 // Convention: world is Z-up, gravity g = (0, 0, -9.81 m/s²). HW6's
-// runner does the convention swap when feeding shooter / target poses
-// from the Y-up Godot arena; HW4 itself is unaware of that.
+// runner owns any simulator-to-solver convention conversion; HW4 itself
+// is unaware of that.
 
 #include <Eigen/Core>
 

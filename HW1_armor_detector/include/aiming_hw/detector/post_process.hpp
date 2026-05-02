@@ -53,7 +53,7 @@ constexpr int kTotalChan = kBoxChan + kKptChan + kClsChan + kObjChan;
 // `score_threshold` filters detections whose objectness*icon-conf
 // drops below the cutoff.
 //
-// IMPLEMENT THIS — TODO(HW1).
+// TODO(HW1): implement decode_head.
 std::vector<Detection> decode_head(const float* head_data,
                                    std::size_t head_count,
                                    int feature_h,
@@ -66,7 +66,7 @@ std::vector<Detection> decode_head(const float* head_data,
 //
 // `iou_threshold` typically 0.45.
 //
-// IMPLEMENT THIS — TODO(HW1).
+// TODO(HW1): implement class-aware non-max suppression.
 std::vector<Detection> non_max_suppression(std::vector<Detection> candidates,
                                            float iou_threshold);
 

@@ -9,8 +9,8 @@
 include_guard(GLOBAL)
 include(FetchContent)
 
-# Pinned 2026-Q1 commit of basis-robotics/uvtarget. Bump only with a
-# CHANGELOG note; tools-of-the-toolchain churn shouldn't be silent.
+# Pinned 2026-Q1 commit of basis-robotics/uvtarget. Bump deliberately;
+# tools-of-the-toolchain churn shouldn't be silent.
 set(UVTARGET_GIT_TAG "v0.1.0" CACHE STRING "uvtarget version pin")
 
 FetchContent_Declare(

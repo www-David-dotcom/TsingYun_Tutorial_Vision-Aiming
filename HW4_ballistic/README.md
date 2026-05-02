@@ -1,5 +1,21 @@
 # HW4 — 弹道补偿与超前射击 / Ballistic + Firing-Delay Solver
 
+> **Status:** Active as part of the Unity-first assignment path; older
+> standalone workflows in this folder are legacy reference.
+>
+> **Unity-first role:** Convert target tracks into lead-compensated aim
+> directions.
+>
+> **Legacy-only:** Standalone projectile math remains the partial-progress
+> harness; live hit-rate evaluation belongs to A6 and later.
+>
+> **Mini-test:** `ctest --preset linux-debug -R hw4`
+>
+> **Mini-test files:**
+> - `HW4_ballistic/tests/public/test_1d_no_drag.cpp`
+> - `HW4_ballistic/tests/public/test_2d_with_gravity.cpp`
+> - `HW4_ballistic/tests/public/test_3d_with_drag.cpp`
+
 > 第四道作业：写一个弹道求解器。已知 HW3 给出的目标位置 + 速度，
 > 计算应该往哪个方向射击，使得子弹（受重力 + 空气阻力影响）抵达
 > 目标未来位置时刚好命中。两个 TODO：飞行时间求解和迭代超前求解。
@@ -12,6 +28,42 @@
 > integrator.
 
 ---
+
+## Student Quickstart
+
+### Prerequisites
+
+- Complete the root [First-time setup](../README.md#first-time-setup).
+- Use the Docker toolchain for Eigen-backed C++ mini-tests.
+
+### What to implement
+
+Fill the `TODO(HW4):` sites in:
+
+- `HW4_ballistic/source/projectile_model.cpp`
+- `HW4_ballistic/source/solver.cpp`
+
+The projectile integration helpers are provided; your work is the acceleration
+model, flight-time solve, and iterative lead solve.
+
+### Mini-test command
+
+```bash
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug -R hw4
+```
+
+### Expected first run
+
+Unfilled solver stubs can cause `GTEST_SKIP` in tests that detect sentinel
+values. After the `TODO(HW4):` sites are filled, no-drag, gravity, and drag
+cases should pass.
+
+### Before moving on
+
+Run `ctest --preset linux-debug -R hw4` inside the Docker toolchain and confirm
+the 1D, 2D, and 3D projectile tests pass.
 
 ## 设计 / Design
 
@@ -38,8 +90,8 @@
 ```
 
 * **Convention:** Z-up world. Gravity = (0, 0, -9.81 m/s²). HW6's
-  runner does the convention swap when feeding shooter / target poses
-  from Y-up Godot; HW4 itself is unaware of it.
+  runner owns any simulator-to-solver convention conversion; HW4 itself
+  is unaware of the live engine.
 * **Defaults:** `ProjectileParams::rm_17mm()` matches the simulator
   pellet (3.2 g, 8.5 mm radius, sphere drag, ρ = 1.225 kg/m³). The
   no-drag and no-gravity-no-drag presets are used by the public
@@ -110,10 +162,8 @@ Three test executables:
 Each test detects the unfilled-TODO state via a sentinel call and
 `GTEST_SKIP`s with a clear message.
 
-The IMPLEMENTATION_PLAN.md acceptance bar (≥ 80% hit rate at 5 m,
-≥ 50% at 10 m, ≥ 20% at 15 m for a constant-velocity target) needs
-the full HW6 runner with HW3's tracker and an actual Godot arena —
-HW4 in isolation only pins the math.
+System-level hit-rate bars need the full HW6 runner with HW3's tracker and
+the Unity arena. HW4 in isolation only pins the math.
 
 ---
 
@@ -124,5 +174,4 @@ HW4 in isolation only pins the math.
 * Wind — not modelled in the simulator.
 * Projectile-projectile collisions — never happen in practice.
 * Heat / barrel-temperature limits — modelled in HW6, not HW4.
-* Hidden grading episodes — deferred per `IMPLEMENTATION_PLAN.md`
-  Stage 10.
+* Hidden grading episodes — grading must be redesigned from `schema.md`.

@@ -2,9 +2,9 @@
 //
 // `Buffer::set_transform` and `Buffer::lookup_direct` are filled. The
 // interpolated path calls `tf::interpolate`, so this test depends on
-// the candidate's TODO. We GTEST_SKIP when the stub is detected (it
+// the candidate blank. We GTEST_SKIP when the stub is detected (it
 // returns identity for any input), so the rest of the suite stays
-// green until the candidate fills the TODO.
+// green until the candidate fills the blank.
 
 #include <gtest/gtest.h>
 
@@ -38,7 +38,7 @@ bool series_is_stub() {
 TEST(HW2BufferLookup, ExactStampReturnsStoredTransform) {
     if (series_is_stub()) {
         GTEST_SKIP() << "Buffer::interpolate_in_series unimplemented "
-                        "— fill the TODO in source/buffer.cpp";
+                        "- fill TODO(HW2): in source/buffer.cpp";
     }
     using namespace aiming_hw::tf;
     Buffer buf;
@@ -53,7 +53,7 @@ TEST(HW2BufferLookup, ExactStampReturnsStoredTransform) {
 
 TEST(HW2BufferLookup, MidpointInterpolatesTranslation) {
     if (interpolate_is_stub()) {
-        GTEST_SKIP() << "tf::interpolate is unimplemented — fill the TODO in interpolate.cpp";
+        GTEST_SKIP() << "tf::interpolate is unimplemented - fill TODO(HW2): in interpolate.cpp";
     }
     using namespace aiming_hw::tf;
     Buffer buf;

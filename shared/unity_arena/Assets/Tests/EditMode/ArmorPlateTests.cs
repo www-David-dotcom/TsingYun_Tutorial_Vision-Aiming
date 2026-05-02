@@ -10,18 +10,18 @@ namespace TsingYun.UnityArena.Tests.EditMode
         [Test]
         public void ApplyDamage_DecrementsHp()
         {
-            var c = new ChassisHpState { MaxHp = 200 };
+            var c = new ChassisHpState { MaxHp = GameConstants.VehicleHpOneVsOne };
             c.Reset();
-            c.ApplyDamage(50);
-            Assert.AreEqual(150, c.Hp);
+            c.ApplyDamage(GameConstants.BulletDamage);
+            Assert.AreEqual(GameConstants.VehicleHpOneVsOne - GameConstants.BulletDamage, c.Hp);
         }
 
         [Test]
         public void ApplyDamage_ClampsAtZero()
         {
-            var c = new ChassisHpState { MaxHp = 200 };
+            var c = new ChassisHpState { MaxHp = GameConstants.VehicleHpOneVsOne };
             c.Reset();
-            c.ApplyDamage(500);
+            c.ApplyDamage(GameConstants.VehicleHpOneVsOne + GameConstants.BulletDamage);
             Assert.AreEqual(0, c.Hp);
             Assert.IsTrue(c.IsDestroyed);
         }
@@ -29,11 +29,11 @@ namespace TsingYun.UnityArena.Tests.EditMode
         [Test]
         public void Reset_RestoresMaxHp()
         {
-            var c = new ChassisHpState { MaxHp = 200 };
+            var c = new ChassisHpState { MaxHp = GameConstants.VehicleHpOneVsOne };
             c.Reset();
-            c.ApplyDamage(150);
+            c.ApplyDamage(GameConstants.BulletDamage);
             c.Reset();
-            Assert.AreEqual(200, c.Hp);
+            Assert.AreEqual(GameConstants.VehicleHpOneVsOne, c.Hp);
         }
 
         [Test]
@@ -41,12 +41,12 @@ namespace TsingYun.UnityArena.Tests.EditMode
         {
             // Real-RM model: hits on different plates of one robot all
             // deduct from the same chassis HP pool.
-            var c = new ChassisHpState { MaxHp = 200 };
+            var c = new ChassisHpState { MaxHp = GameConstants.VehicleHpOneVsOne };
             c.Reset();
-            c.ApplyDamage(40);  // front plate hit
-            c.ApplyDamage(40);  // back plate hit
-            c.ApplyDamage(40);  // left plate hit
-            Assert.AreEqual(80, c.Hp);
+            c.ApplyDamage(GameConstants.BulletDamage);  // front plate hit
+            c.ApplyDamage(GameConstants.BulletDamage);  // back plate hit
+            c.ApplyDamage(GameConstants.BulletDamage);  // left plate hit
+            Assert.AreEqual(GameConstants.VehicleHpOneVsOne - 3 * GameConstants.BulletDamage, c.Hp);
         }
 
         [Test]

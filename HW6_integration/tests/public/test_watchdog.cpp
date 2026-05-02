@@ -41,7 +41,7 @@ TEST(HW6Watchdog, DoesNotFireWhenPettedRegularly) {
 TEST(HW6Watchdog, FiresOnceWhenStarved) {
     if (poll_loop_is_stub()) {
         GTEST_SKIP() << "Watchdog::poll_loop unimplemented "
-                        "— fill the TODO in source/watchdog.cpp";
+                        "- fill TODO(HW6): in source/watchdog.cpp";
     }
     std::atomic<int> fires{0};
     Watchdog wd(20ms, 2ms, [&] { fires.fetch_add(1, std::memory_order_relaxed); });

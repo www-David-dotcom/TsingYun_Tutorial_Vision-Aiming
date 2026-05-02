@@ -3,9 +3,8 @@ using System;
 namespace TsingYun.UnityArena
 {
     // Single source of randomness for the arena so the same EnvReset.seed gives
-    // byte-identical episodes. Mirrors seed_rng.gd. Subsystems that need
-    // randomness call NextFloat / NextRange / NextInt; ArenaMain calls Reseed
-    // on every new episode.
+    // byte-identical episodes. Subsystems that need randomness call NextFloat /
+    // NextRange / NextInt; ArenaMain calls Reseed on every new episode.
     public static class SeedRng
     {
         private static Random _rng = new Random(0);
@@ -31,7 +30,7 @@ namespace TsingYun.UnityArena
 
         public static int NextInt(int lo, int hi)
         {
-            // Inclusive on both ends, matching Godot's randi_range.
+            // Inclusive on both ends.
             return _rng.Next(lo, hi + 1);
         }
     }

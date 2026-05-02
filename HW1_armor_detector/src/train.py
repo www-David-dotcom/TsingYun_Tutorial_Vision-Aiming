@@ -4,7 +4,7 @@ The full skeleton is here — dataloader, optimizer, scheduler, training
 loop, validation, checkpoint dump. **Four** functions are stubbed with
 `# TODO(HW1):` markers. Fill them and you have a working detector.
 
-Each TODO is one or two lines that compose primitives from
+Each blank is one or two lines that compose primitives from
 `src/losses.py`. Read that module first before implementing.
 
 Usage:
@@ -28,7 +28,11 @@ from PIL import Image
 from torch import Tensor, nn, optim
 from torch.utils.data import DataLoader, Dataset
 from torchvision.transforms.functional import to_tensor
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:  # pragma: no cover - optional training nicety
+    def tqdm(iterable, *args, **kwargs):
+        return iterable
 
 # Local imports.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -83,7 +87,7 @@ def collate_fn(batch):
     return images, targets
 
 
-# ------------------------------------------------------------ TODO sites
+# ------------------------------------------------------------ TODO(HW1): sites
 
 def mixup(images: Tensor, targets: list[dict], alpha: float, rng: np.random.Generator) -> tuple[Tensor, list[dict]]:
     """Pairwise mixup augmentation.

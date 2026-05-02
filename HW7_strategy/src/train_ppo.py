@@ -6,7 +6,7 @@ observation the BT sees. The trained policy is saved as a TorchScript
 .pt and HW6's runner can swap it in via a config flag.
 
 This file ships an opinionated minimum:
-  * `make_env()` — wraps a gRPC connection to the Stage-2 Godot arena
+  * `make_env()` — wraps a gRPC connection to the Unity arena
     in a Gym-style env interface.
   * `PolicyMlp` — small fully-connected actor-critic.
   * `train()` — vanilla PPO with clipped objective, GAE-Lambda advantage
@@ -52,8 +52,8 @@ ACT_DIM = 4       # engage / retreat / patrol / reload
 class StubArenaEnv:
     """Gym-style env stub that emits canned observations.
 
-    Replace with a gRPC-backed env once the Stage-2 arena is live on
-    the candidate's host. The candidate's job: in `make_env`, swap
+    Replace with a gRPC-backed env once the Unity arena is live on the
+    candidate's host. The candidate's job: in `make_env`, swap
     StubArenaEnv for a real one that talks to `tcp://127.0.0.1:7654`.
     """
 

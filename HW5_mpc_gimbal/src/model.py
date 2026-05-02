@@ -6,7 +6,7 @@ State vector (6-dim):
 Control vector (2-dim):
     [yaw_torque_cmd, pitch_torque_cmd]
 
-Two TODO sites:
+Two TODO(HW5): sites:
     * `motor_torque_lag` — first-order lag from cmd to applied torque.
     * `state_dot`        — full state derivative composing kinematics
                            + the lag dynamics above.
@@ -71,7 +71,7 @@ def motor_torque_lag(
     Mathematical form:
         torque_dot = (cmd - torque) / motor_lag_tc
 
-    IMPLEMENT THIS — TODO(HW5).
+    TODO(HW5): implement this lag model.
     """
     # TODO(HW5): two lines. The lag dynamics for both axes are
     # symmetric — same time constant, applied independently to each

@@ -1,14 +1,14 @@
 # Architecture overview
 
-This is a render of `schema.md` §3 with stage-1 implementation pointers
-attached. For the design rationale, read the schema; for the code, read
-this file's "where does this live" links.
+This is a Unity-only render of `schema.md` with implementation pointers
+attached. `schema.md` remains the source of truth; this file is only a map
+from the spec to code.
 
 ## High-level diagram
 
 ```
 ┌────────────────────────────────────┐         gRPC (control)         ┌────────────────────────────────────┐
-│ Aiming Arena (Godot/Unity binary)  │ <───────────────────────────── │ Candidate's C++ stack (`hw_runner`) │
+│ Aiming Arena (Unity runtime)       │ <───────────────────────────── │ Candidate's C++ stack (`hw_runner`) │
 │ - physics, rendering, scoring      │                                │ - detector (HW1)                   │
 │ - frozen RL opponents              │ ─── ZMQ PUB (image frames) ──> │ - PnP (provided)                   │
 │ - replay recorder                  │                                │ - tf graph (HW2)                   │
@@ -32,6 +32,14 @@ this file's "where does this live" links.
 └────────────────────────────────────────────────────┘
 ```
 
+## Active Unity transport
+
+The current Unity runtime exposes length-prefixed TCP JSON control on port
+`7654` and raw RGB frame TCP on port `7655`. See
+[`docs/unity-wire-contract.md`](unity-wire-contract.md). The older gRPC/ZMQ
+language below remains architecture intent and generated-proto context, not the
+current local Unity transport implementation.
+
 ## What stage 1 ships of this picture
 
 | Component | Status | Code |
@@ -39,9 +47,9 @@ this file's "where does this live" links.
 | gRPC service definition | ✅ | [`shared/proto/aiming.proto`](../shared/proto/aiming.proto) |
 | Sensor / cmd types | ✅ | [`shared/proto/sensor.proto`](../shared/proto/sensor.proto) |
 | Episode telemetry | ✅ | [`shared/proto/episode.proto`](../shared/proto/episode.proto) |
-| Stand-in gRPC server (until Godot exists) | ✅ | [`shared/grpc_stub_server/`](../shared/grpc_stub_server/) |
+| Stand-in gRPC server | legacy support | [`shared/grpc_stub_server/`](../shared/grpc_stub_server/) |
 | Stand-in ZMQ frame stream | ✅ | [`shared/zmq_frame_pub/`](../shared/zmq_frame_pub/) |
-| Real Godot arena | Stage 2 | will land in `shared/godot_arena/` |
+| Unity arena | active | [`shared/unity_arena/`](../shared/unity_arena/) |
 | Candidate C++ pipeline (`hw_runner`) | Stage 3+ | one HW at a time |
 | Reference toolchain image | ✅ | [`shared/docker/toolchain.Dockerfile`](../shared/docker/toolchain.Dockerfile) |
 | OSS asset distribution | ✅ | [`shared/scripts/fetch_assets.py`](../shared/scripts/fetch_assets.py) |
@@ -64,7 +72,7 @@ candidate:                 simulator:
    ──> EnvPushFire(burst_count=1)
                                 ──> FireResult{accepted, queued_count}
 
-   ... 90 seconds of episode ...
+   ... 5 minutes of episode ...
 
    ──> EnvFinish(flush_replay=True)
                                 ──> EpisodeStats{ outcome, damage, events, ... }
@@ -97,6 +105,6 @@ of the seed.
 
 ## Deferred (stage 2+ concerns)
 
-* Real Godot arena scene
+* Unity game-rule completion
 * Frozen RL opponent training (Sample Factory + PettingZoo)
 * Per-HW grading episodes

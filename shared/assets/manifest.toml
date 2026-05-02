@@ -16,9 +16,9 @@
 #     literal local_path so HW READMEs can reference a stable filesystem
 #     location.
 #
-# Stage 1 ships an empty manifest plus one sentinel-public asset for smoke
-# testing the fetcher. Stage 2+ append real entries (Godot binaries, HW1
-# datasets, opponent policies).
+# The current manifest ships one sentinel-public asset for smoke testing the
+# fetcher plus placeholder rows for datasets, opponent policies, and generated
+# solver bundles.
 
 oss_endpoint = "oss-cn-beijing.aliyuncs.com"
 oss_region   = "cn-beijing"
@@ -32,42 +32,6 @@ size        = 0
 visibility  = "anonymous"
 local_path  = "out/assets/sentinels/hello-public.txt"
 description = "1-byte file that fetch_assets.py uses to verify anonymous read on the public bucket. The sha256 above is a placeholder; populate it after the team uploads the real sentinel."
-
-# --- Stage 2 (v0.6-arena-poc) ---
-# Godot arena binaries. Built via `godot --headless --export-release` on
-# the maintainer's workstation; pushed to the public bucket so candidates
-# pull anonymously. Each entry's sha256 is a placeholder until the team
-# performs the first export + push (see shared/godot_arena/README.md).
-
-[[asset]]
-name        = "godot-arena-linux-x86_64"
-bucket      = "tsingyun-aiming-hw-public"
-key         = "assets/godot/0.6.0/aiming_arena_linux.x86_64"
-sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
-size        = 0
-visibility  = "anonymous"
-local_path  = "out/assets/godot/aiming_arena_linux.x86_64"
-description = "Headless-capable Godot 4.3 server binary for Linux x86_64. Stage-2 arena PoC — see shared/godot_arena/. Placeholder digest; populate after first export."
-
-[[asset]]
-name        = "godot-arena-macos-universal"
-bucket      = "tsingyun-aiming-hw-public"
-key         = "assets/godot/0.6.0/aiming_arena_macos.zip"
-sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
-size        = 0
-visibility  = "anonymous"
-local_path  = "out/assets/godot/aiming_arena_macos.zip"
-description = "Universal (arm64+x86_64) macOS .app bundle, packaged as a zip. Placeholder digest."
-
-[[asset]]
-name        = "godot-arena-windows-x86_64"
-bucket      = "tsingyun-aiming-hw-public"
-key         = "assets/godot/0.6.0/aiming_arena_win64.exe"
-sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
-size        = 0
-visibility  = "anonymous"
-local_path  = "out/assets/godot/aiming_arena_win64.exe"
-description = "Standalone Windows x86_64 executable. Placeholder digest."
 
 # --- Stage 3 (v0.7-hw1-detector) ---
 # HW1 candidate-facing data + the bronze opponent policy. The
@@ -93,7 +57,7 @@ sha256      = "0000000000000000000000000000000000000000000000000000000000000000"
 size        = 0
 visibility  = "private"
 local_path  = "out/assets/policies/bronze.pt"
-description = "Frozen bronze-tier opponent policy. Drives the red chassis so HW1 candidates can run a 90s match without a real adversary. Train + push via shared/scripts/push_assets.py once stage3's RL side ships; placeholder digest until then."
+description = "Frozen bronze-tier opponent policy. Drives the red chassis so HW candidates can run a 5-minute schema match without a real adversary. Train + push via shared/scripts/push_assets.py once the RL side ships; placeholder digest until then."
 
 # --- Stage 5 (v0.9-hw3-ekf) ---
 # The silver opponent policy. Trains in parallel with Stage 5's
@@ -129,10 +93,8 @@ local_path  = "out/assets/HW5/acados_solver_v1.1.tar.gz"
 description = "acados-codegened C library + headers for the HW5 MPC. Untar to HW5_mpc_gimbal/generated_solver/ before configuring the build. Placeholder digest until the team runs the codegen + push."
 
 # --- Stage 9 (v1.3-hw7-strategy) ---
-# Gold opponent policy. Trained via 3-day self-play (per
-# IMPLEMENTATION_PLAN.md Stage 9 plan) and uploaded by the team.
-# Candidates pull it via fetch_assets.py to play against the hardest
-# tier in HW7's 5-vs-gold acceptance episodes.
+# Gold opponent policy. Training details will be replaced by the Unity-first
+# RL plan; the row remains as the intended final policy artifact location.
 
 [[asset]]
 name        = "gold-opponent-policy"

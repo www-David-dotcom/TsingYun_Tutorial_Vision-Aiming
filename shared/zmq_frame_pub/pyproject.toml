@@ -1,7 +1,7 @@
 [project]
 name = "zmq-frame-pub"
 version = "0.5.0"
-description = "Synthetic 720p RGB frame publisher used for HW1+ stages before the Godot arena exists"
+description = "Synthetic 720p RGB frame publisher for legacy HW1+ protocol checks"
 requires-python = ">=3.11"
 
 dependencies = [

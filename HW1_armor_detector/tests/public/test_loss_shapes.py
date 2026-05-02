@@ -103,7 +103,7 @@ def test_loss_box_runs_or_skips() -> None:
     try:
         loss = loss_box(pred_box, decoded, assigns)
     except NotImplementedError:
-        pytest.xfail("loss_box not implemented — fill the TODO in train.py")
+        pytest.xfail("loss_box not implemented - fill TODO(HW1): in train.py")
     assert torch.isfinite(loss)
     assert loss.dim() == 0
 
@@ -117,7 +117,7 @@ def test_loss_kpt_runs_or_skips() -> None:
     try:
         loss = loss_kpt(pred_kpt, assigns)
     except NotImplementedError:
-        pytest.xfail("loss_kpt not implemented — fill the TODO in train.py")
+        pytest.xfail("loss_kpt not implemented - fill TODO(HW1): in train.py")
     assert torch.isfinite(loss)
 
 
@@ -131,5 +131,5 @@ def test_loss_cls_runs_or_skips() -> None:
     try:
         loss = loss_cls(pred_cls, pred_obj, assigns)
     except NotImplementedError:
-        pytest.xfail("loss_cls not implemented — fill the TODO in train.py")
+        pytest.xfail("loss_cls not implemented - fill TODO(HW1): in train.py")
     assert torch.isfinite(loss)

@@ -12,8 +12,8 @@ horizon:
   step_seconds: 0.01        # dt — control-loop period (100 Hz)
 
 # Physical parameters of the two-axis gimbal. These match the
-# RoboMaster reference robot to within a factor of two; the candidate
-# can refine via system identification on shared/godot_arena replays.
+# RoboMaster reference robot to within a factor of two; future tuning should
+# use Unity replay data.
 physics:
   inertia_yaw_kgm2:    0.012
   inertia_pitch_kgm2:  0.008

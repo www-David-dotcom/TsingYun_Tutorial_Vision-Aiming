@@ -2,7 +2,7 @@
 
 // Top-level multi-target tracker. Owns one IMM per active track and
 // drives data association on each frame. The candidate doesn't edit
-// this header — they only fill the four lower-level TODO targets in
+// this header - they only fill the four lower-level candidate blanks in
 // kalman_step.cpp / imm.cpp / data_association.cpp; this class wires
 // the pieces together.
 

@@ -34,7 +34,7 @@ namespace TsingYun.UnityArena
         // damage-glow effect driven by chassis HP ratio.
         [SerializeField] private MeshRenderer plateRenderer;
 
-        public event Action<int, int> PlateHit;  // damage, sourceInstanceId
+        public event Action<int, string> PlateHit;  // damage, sourceTeam
 
         // Computed on demand from the public fields so chassis-side
         // overrides written after this plate's Awake (Chassis.AssignArmor-
@@ -81,7 +81,7 @@ namespace TsingYun.UnityArena
             int damage = projectile.OnArmorHit(this);
             if (damage > 0)
             {
-                PlateHit?.Invoke(damage, other.GetInstanceID());
+                PlateHit?.Invoke(damage, projectile.Team);
             }
         }
     }

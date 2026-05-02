@@ -3,8 +3,8 @@
 Implements the contract from shared/proto/aiming.proto with a deterministic
 stub world: fixed map, fixed dummy target, projectiles always miss, gimbal
 state mirrors whatever the candidate commands. Useful for protocol-level
-smoke tests and as a target for HW1+'s C++ client before the real Godot
-arena ships in stage 2.
+smoke tests and as a target for HW1+'s C++ client before the Unity arena is
+running locally.
 """
 
 from __future__ import annotations
@@ -25,12 +25,10 @@ sensor_pb2 = proto_codegen.import_pb2("sensor")
 episode_pb2 = proto_codegen.import_pb2("episode")
 aiming_pb2_grpc = proto_codegen.import_pb2_grpc("aiming")
 
-
 @dataclass
 class _EpisodeState:
     seed: int
     started_ns: int
-    duration_ns: int
     opponent_tier: str
     last_yaw: float = 0.0
     last_pitch: float = 0.0
@@ -96,11 +94,9 @@ class AimingArenaStub(aiming_pb2_grpc.AimingArenaServicer):
         context: grpc.ServicerContext,
     ) -> aiming_pb2.InitialState:
         with self._lock:
-            duration_ns = request.duration_ns or 90_000_000_000
             self._episode = _EpisodeState(
                 seed=request.seed,
                 started_ns=self._now_ns(),
-                duration_ns=duration_ns,
                 opponent_tier=request.opponent_tier or "bronze",
             )
             bundle = self._make_bundle(frame_id=0, oracle_hints=request.oracle_hints)

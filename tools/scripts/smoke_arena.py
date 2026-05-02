@@ -1,13 +1,11 @@
-"""Smoke test the Godot arena's TCP control surface.
+"""Smoke test the Unity arena's TCP control surface.
 
-Connects to the running Godot arena (started via
-`godot --path shared/godot_arena --headless`), drives a 4-step episode
-(reset → step → push fire → finish), and prints the messages back.
+Connects to the running Unity arena in Play mode, drives a 4-step episode
+(reset -> step -> push fire -> finish), and prints the messages back.
 
-The transport is the Stage-2 fallback: length-prefixed (4-byte BE) JSON
-over TCP. The proto contract is preserved — every response dict here
-parses through `google.protobuf.json_format.ParseDict` into the
-matching message type.
+The transport is length-prefixed (4-byte BE) JSON over TCP. Every response
+dict parses through `google.protobuf.json_format.ParseDict` into the matching
+message type.
 """
 
 from __future__ import annotations
@@ -55,15 +53,13 @@ def _recv_exact(sock: socket.socket, n: int) -> bytes:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--engine", default="godot", choices=["godot", "unity"],
-                        help="which engine the running arena is. Wire is identical between them.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=7654, type=int)
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--ticks", default=10, type=int)
     args = parser.parse_args()
 
-    print(f"[smoke] engine={args.engine} host={args.host} port={args.port}")
+    print(f"[smoke] host={args.host} port={args.port}")
 
     with socket.create_connection((args.host, args.port), timeout=5) as sock:
         # 1. Reset

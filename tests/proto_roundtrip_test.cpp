@@ -83,21 +83,21 @@ TEST(ProtoRoundtrip, EpisodeStatsEvents) {
     s.set_episode_id("e-0001");
     s.set_seed(42);
     s.set_outcome(tsingyun_v1::EpisodeStats::OUTCOME_WIN);
-    s.set_damage_dealt(800);
+    s.set_damage_dealt(200);
     s.set_aim_latency_p95_ns(20'000'000ULL);
 
     auto* e = s.add_events();
     e->set_kind(tsingyun_v1::ProjectileEvent::KIND_HIT_ARMOR);
     e->set_armor_id("blue.front");
-    e->set_damage(50);
+    e->set_damage(20);
 
     auto out = RoundTrip(s);
     EXPECT_EQ(out.episode_id(), "e-0001");
     EXPECT_EQ(out.seed(), 42u);
     EXPECT_EQ(out.outcome(), tsingyun_v1::EpisodeStats::OUTCOME_WIN);
-    EXPECT_EQ(out.damage_dealt(), 800u);
+    EXPECT_EQ(out.damage_dealt(), 200u);
     EXPECT_EQ(out.aim_latency_p95_ns(), 20'000'000ULL);
     ASSERT_EQ(out.events_size(), 1);
     EXPECT_EQ(out.events(0).armor_id(), "blue.front");
-    EXPECT_EQ(out.events(0).damage(), 50u);
+    EXPECT_EQ(out.events(0).damage(), 20u);
 }

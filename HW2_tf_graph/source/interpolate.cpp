@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-// Two TODOs. Each is a few lines once you've thought about the
+// Two candidate blanks. Each is a few lines once you've thought about the
 // short-arc / antipodal cases for SLERP and the order of operations
 // for compose. Read transform.hpp first — `Transform::operator*` and
 // `Transform::inverse` may be useful but neither is required.

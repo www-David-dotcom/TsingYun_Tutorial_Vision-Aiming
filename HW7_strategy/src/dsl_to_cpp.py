@@ -15,7 +15,7 @@ nodes reference a leaf by name. Six leaf names are recognised:
     engage / retreat_to_cover / patrol / reload
         — direct calls into leaf_actions.hpp.
     should_retreat_check
-        — wraps the candidate's `should_retreat` TODO; emits a
+        - wraps the candidate `should_retreat` blank; emits a
           lambda that returns Success when retreat is true.
     engage_or_patrol
         — convenience: calls engage; if it returns Failure, falls

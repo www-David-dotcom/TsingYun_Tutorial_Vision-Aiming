@@ -1,7 +1,7 @@
 """HW1 detector — MobileNetV3-Small backbone + anchor-free multi-task head.
 
 Filled, no TODOs. Candidates use this module unmodified; the
-TODO-bearing surface is in src/train.py (loss formulation) and the C++
+candidate-facing surface is in src/train.py (loss formulation) and the C++
 post-processing in source/inferer.cpp + source/post_process.cpp
 (decode + NMS).
 
@@ -56,15 +56,14 @@ def _build_backbone(pretrained: bool) -> tuple[nn.Module, int]:
 
     The full MobileNetV3-Small ends at stride 32 — we slice the
     `.features` list to stop one stage earlier, where the channel
-    count is 96.
+    count is 48.
     """
     weights = MobileNet_V3_Small_Weights.IMAGENET1K_V1 if pretrained else None
     full = mobilenet_v3_small(weights=weights)
-    # Keep features [0..11] which lands at the 96-channel stride-16
-    # block; stages [12..15] downsample further to stride 32 and we
-    # don't need them.
-    backbone = nn.Sequential(*list(full.features[:12]))
-    return backbone, 96
+    # Keep features [0..8] which lands at the 48-channel stride-16
+    # block; later stages downsample to stride 32 and we don't need them.
+    backbone = nn.Sequential(*list(full.features[:9]))
+    return backbone, 48
 
 
 class DetectorHead(nn.Module):

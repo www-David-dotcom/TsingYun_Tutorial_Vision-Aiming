@@ -1,5 +1,21 @@
 # HW2 — 坐标变换图 / TF Graph
 
+> **Status:** Active as part of the Unity-first assignment path; older
+> standalone workflows in this folder are legacy reference.
+>
+> **Unity-first role:** Maintain world, chassis, gimbal, and camera transforms
+> for Unity observations.
+>
+> **Legacy-only:** The standalone TF buffer remains math reference; it is not a
+> ROS integration task.
+>
+> **Mini-test:** `ctest --preset linux-debug -R hw2`
+>
+> **Mini-test files:**
+> - `HW2_tf_graph/tests/public/test_basic_lookup.cpp`
+> - `HW2_tf_graph/tests/public/test_chain_compose.cpp`
+> - `HW2_tf_graph/tests/public/test_interpolation_corners.cpp`
+
 > 第二道作业：写一个简单的位姿缓存（TF buffer），存时间戳化的
 > rigid transform，按时间插值返回。两个 TODO：四元数 SLERP 插值
 > 和变换链组合。所有数学都用 Eigen，没有 ROS 依赖。
@@ -10,6 +26,43 @@
 > is filled. Three public tests drive the work.
 
 ---
+
+## Student Quickstart
+
+### Prerequisites
+
+- Complete the root [First-time setup](../README.md#first-time-setup).
+- Use the Docker toolchain for the supported Eigen 3.4 C++ environment.
+- Native builds are fine if `cmake --preset <your-host>-debug` finds Eigen 3.4.
+
+### What to implement
+
+Fill the `TODO(HW2):` sites in:
+
+- `HW2_tf_graph/source/interpolate.cpp`
+- `HW2_tf_graph/source/buffer.cpp`
+
+The main math is `tf::interpolate` and `tf::compose`; `Buffer` calls those
+functions from lookup paths.
+
+### Mini-test command
+
+```bash
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug -R hw2
+```
+
+### Expected first run
+
+An unfilled stage may show `GTEST_SKIP` for tests that detect identity-return
+stubs. After the `TODO(HW2):` sites are implemented, those skips should become
+passing assertions.
+
+### Before moving on
+
+Run `ctest --preset linux-debug -R hw2` inside the Docker toolchain and confirm
+the interpolation, composition, and lookup tests all pass.
 
 ## 设计 / Design
 

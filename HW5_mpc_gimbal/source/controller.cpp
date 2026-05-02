@@ -11,7 +11,7 @@
 //   3. The runtime here links against that library and dispatches
 //      the per-tick QP via acados_solve / acados_get_x_at_stage.
 //
-// One TODO(HW5) site, in `MpcController::step`. The header / dtor /
+// One TODO(HW5): site, in `MpcController::step`. The header / dtor /
 // last_qp_iter / last_residual are filled.
 
 namespace aiming_hw {
@@ -22,7 +22,7 @@ struct MpcController::Impl {
     double last_residual = 0.0;
     // The generated acados solver lives here. We use a void* / opaque
     // handle to avoid pulling acados headers into our public surface.
-    // The candidate's TODO casts this back to `acados_ocp_capsule*`
+    // The candidate blank casts this back to `acados_ocp_capsule*`
     // (defined in the generated library) inside step().
     void*  acados_capsule = nullptr;
 };
@@ -83,7 +83,7 @@ PidCommand MpcController::step(const PidState& state,
     //         impl_->last_residual = ...;
     //   6. Read out u_0 and return as torque commands.
     //
-    // While the TODO is unfilled, fall back to a clamped feed-forward
+    // While the HW5 blank is unfilled, fall back to a clamped feed-forward
     // that matches the reference rate — guarantees the binary
     // compiles and tests for the controller's *interface* still pass,
     // even if performance is dramatically below the MPC.

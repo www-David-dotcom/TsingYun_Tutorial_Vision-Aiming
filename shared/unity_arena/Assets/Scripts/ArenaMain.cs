@@ -10,17 +10,13 @@ namespace TsingYun.UnityArena
     public enum EpisodeState { Idle, Running, Finishing }
 
     // Episode orchestrator. Owns the TCP control server, frame publisher, and
-    // replay recorder. Mirrors arena_main.gd one-to-one.
+    // replay recorder.
     public class ArenaMain : MonoBehaviour
     {
         public const string SimBuildSha = "stage12a-unity-scaffold-1.6";
-        public const long DefaultDurationNs = 90_000_000_000L;
-        // RM Standard robots cap fire rate around 10 Hz; 5 Hz here gives a
-        // visible cadence and matches the smoke-test viewing window.
-        // Burst fires from EnvPushFire are queued and drained at this rate
-        // by Update.DrainShotQueue rather than spawned all in one tick.
-        public const float BulletsPerSecond = 5f;
-        private const float BulletIntervalSeconds = 1f / BulletsPerSecond;
+        public const long DefaultDurationNs = GameConstants.MatchDurationNanoseconds;
+        public const float BulletsPerSecond = GameConstants.FireRateRoundsPerSecond;
+        private const float BulletIntervalSeconds = GameConstants.FireIntervalSeconds;
 
         public int ControlPort = 7654;
         public int FramePort = 7655;
@@ -36,6 +32,8 @@ namespace TsingYun.UnityArena
         public Transform SpawnPointBlue;
         public Transform SpawnPointRed;
         public GameObject ProjectilePrefab;
+        public float HealingZoneRadius = GameConstants.HealingZoneRadiusMeters;
+        public float BoostPointHoldRadius = GameConstants.BoostPointHoldRadiusMeters;
 
         public EpisodeState State { get; private set; } = EpisodeState.Idle;
         public string EpisodeId { get; private set; } = "";
@@ -54,11 +52,10 @@ namespace TsingYun.UnityArena
         // Silicon (1 GHz mach_absolute_time, value is mac uptime not process
         // uptime) overflowed `long` after 107 days of mac uptime.
         private static readonly Stopwatch _processClock = Stopwatch.StartNew();
-        private long _startedTicksMs;
         private readonly List<Dictionary<string, object>> _events = new List<Dictionary<string, object>>();
-        private int _projectilesFired;
-        private int _armorHits;
-        private int _damageDealt;
+        private readonly MatchRuleRuntime _rules = new MatchRuleRuntime();
+        private readonly ArenaEpisodeClock _clock = new ArenaEpisodeClock(() => _processClock.ElapsedMilliseconds);
+        private RuleZonePresentation _ruleZonePresentation;
         // Rate-limited shot queue. EnvPushFire increments _pendingShots; Update
         // drains one shot per BulletIntervalSeconds. Reset on EnvReset so
         // unfired shots from a previous episode don't carry over.
@@ -127,6 +124,11 @@ namespace TsingYun.UnityArena
             if (State != EpisodeState.Running) return;
             while (_pendingShots > 0 && Time.time >= _nextShotTime)
             {
+                if (!_rules.CanFire)
+                {
+                    _pendingShots = 0;
+                    return;
+                }
                 SpawnSingleProjectile();
                 _pendingShots--;
                 _nextShotTime = Time.time + BulletIntervalSeconds;
@@ -179,17 +181,18 @@ namespace TsingYun.UnityArena
             long seedValue = AsLong(request, "seed", 0);
             OpponentTier = AsString(request, "opponent_tier", "bronze");
             OracleHints = AsBool(request, "oracle_hints", false);
-            long requestedDuration = AsLong(request, "duration_ns", 0);
-            DurationNs = requestedDuration > 0 ? requestedDuration : DefaultDurationNs;
+            // schema.md fixes match duration at exactly 5 minutes. The
+            // duration_ns reset field is kept on the wire for old harnesses,
+            // but no longer overrides game rules.
+            DurationNs = DefaultDurationNs;
 
             SeedRng.Reseed(seedValue);
             EpisodeId = $"ep-{seedValue:x16}";
-            _startedTicksMs = _processClock.ElapsedMilliseconds;
+            _clock.Reset();
             FrameId = 0;
             _events.Clear();
-            _projectilesFired = 0;
-            _armorHits = 0;
-            _damageDealt = 0;
+            _rules.Reset(SeedRng.NextFloat, SeedRng.NextFloat);
+            EnsureRuleMarkers();
             _pendingShots = 0;
             _nextShotTime = 0f;
 
@@ -213,12 +216,10 @@ namespace TsingYun.UnityArena
             State = EpisodeState.Running;
             _replay.Start(EpisodeId, seedValue);
 
-            return new Dictionary<string, object>
-            {
-                { "bundle", BuildSensorBundle() },
-                { "zmq_frame_endpoint", $"tcp://127.0.0.1:{FramePort}" },
-                { "simulator_build_sha256", SimBuildSha },
-            };
+            return ArenaWirePayloadBuilder.BuildInitialState(
+                BuildSensorBundle(),
+                FramePort,
+                SimBuildSha);
         }
 
         public Dictionary<string, object> EnvStep(Dictionary<string, object> cmd)
@@ -226,11 +227,11 @@ namespace TsingYun.UnityArena
             if (State != EpisodeState.Running)
                 return new Dictionary<string, object> { { "_error", $"env_step called in state={State}" } };
 
-            // Apply the gimbal cmd from this tick. Mirrors arena_main.gd
-            // env_step: target_yaw/pitch are absolute targets in radians;
+            // Apply the gimbal cmd from this tick. target_yaw/pitch are
+            // absolute targets in radians;
             // *_rate_ff are optional feed-forward rates the agent can use to
             // anticipate motion. Missing keys default to zero.
-            if (BlueChassis.Gimbal != null)
+            if (!BlueChassis.IsDestroyed && BlueChassis.Gimbal != null)
             {
                 BlueChassis.Gimbal.SetTarget(
                     (float)AsDouble(cmd, "target_yaw", 0.0),
@@ -239,8 +240,9 @@ namespace TsingYun.UnityArena
                     (float)AsDouble(cmd, "pitch_rate_ff", 0.0));
             }
 
+            ApplyTimedMatchRules();
             FrameId++;
-            if (NowNs() > DurationNs) State = EpisodeState.Finishing;
+            if (ResolveMatchOutcome() != MatchOutcome.InProgress) State = EpisodeState.Finishing;
             return BuildSensorBundle();
         }
 
@@ -248,8 +250,15 @@ namespace TsingYun.UnityArena
         {
             if (State != EpisodeState.Running)
                 return new Dictionary<string, object> { { "accepted", false }, { "reason", "no_episode" }, { "queued_count", 0 } };
+            if (BlueChassis.IsDestroyed)
+                return new Dictionary<string, object> { { "accepted", false }, { "reason", "destroyed" }, { "queued_count", 0 } };
             if (ProjectilePrefab == null || BlueChassis.Gimbal == null)
                 return new Dictionary<string, object> { { "accepted", false }, { "reason", "no_prefab" }, { "queued_count", 0 } };
+            if (!_rules.CanFire)
+            {
+                _pendingShots = 0;
+                return new Dictionary<string, object> { { "accepted", false }, { "reason", "fire_locked" }, { "queued_count", 0 } };
+            }
 
             int burst = Mathf.Max(0, (int)AsLong(cmd, "burst_count", 1));
             // Burst is enqueued; Update.DrainShotQueue spawns one bullet per
@@ -281,7 +290,8 @@ namespace TsingYun.UnityArena
             var go = Instantiate(ProjectilePrefab, spec.Position, spec.Rotation, ProjectileRoot);
             var p = go.GetComponent<Projectile>();
             p.Arm(spec.Velocity, BlueChassis.Team);
-            _projectilesFired++;
+            _rules.RecordShotHeat();
+            _rules.RecordPlayerProjectileFired();
             _events.Add(new Dictionary<string, object>
             {
                 { "stamp_ns", NowNs() }, { "kind", "KIND_FIRED" },
@@ -292,102 +302,186 @@ namespace TsingYun.UnityArena
         private Dictionary<string, object> BuildSensorBundle()
         {
             long stamp = NowNs();
-            var gimbal = BlueChassis.GimbalState();
-            gimbal["stamp_ns"] = stamp;
-            var bundle = new Dictionary<string, object>
-            {
-                { "frame", new Dictionary<string, object>
-                {
-                    { "frame_id", FrameId },
-                    { "zmq_topic", $"frames.{SeedRng.CurrentSeed()}" },
-                    { "stamp_ns", stamp },
-                    { "width", 1280L },
-                    { "height", 720L },
-                    { "pixel_format", "PIXEL_FORMAT_RGB888" },
-                }},
-                { "imu", new Dictionary<string, object>
-                {
-                    { "stamp_ns", stamp },
-                    { "angular_velocity", new Dictionary<string, object> { { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } } },
-                    { "linear_accel", new Dictionary<string, object> { { "x", 0.0 }, { "y", -9.81 }, { "z", 0.0 } } },
-                    { "orientation", new Dictionary<string, object> { { "w", 1.0 }, { "x", 0.0 }, { "y", 0.0 }, { "z", 0.0 } } },
-                }},
-                { "gimbal", gimbal },
-                { "odom", BuildOdomPayload(stamp) },
-            };
-            if (OracleHints)
-            {
-                bundle["oracle"] = new Dictionary<string, object>
-                {
-                    { "target_position_world", Vec3Dict(RedChassis.transform.position) },
-                    // Was hard-coded zero; the MPC agent uses this for lead-
-                    // compensation when oracle_hints=true and would otherwise
-                    // aim at the current position instead of the intercept.
-                    { "target_velocity_world", Vec3Dict(RedChassis.LinearVelocity) },
-                    { "target_visible", true },
-                };
-            }
-            return bundle;
+            return ArenaWirePayloadBuilder.BuildSensorBundle(
+                FrameId,
+                $"frames.{SeedRng.CurrentSeed()}",
+                stamp,
+                BlueChassis.GimbalState(),
+                BlueChassis.OdomState(),
+                OracleHints,
+                RedChassis.transform.position,
+                RedChassis.LinearVelocity);
         }
 
-        private Dictionary<string, object> BuildOdomPayload(long stamp)
+        private Dictionary<string, object> BuildEpisodeStats()
+            => ArenaWirePayloadBuilder.BuildEpisodeStats(
+                EpisodeId,
+                SeedRng.CurrentSeed(),
+                NowNs(),
+                SimBuildSha,
+                OpponentTier,
+                ResolveEpisodeOutcome(),
+                BlueChassis.DamageTaken,
+                _rules.State,
+                BlueChassis.Team,
+                _events);
+
+        private MatchOutcome ResolveMatchOutcome()
+            => _rules.ResolveOutcome(NowNs() / 1_000_000_000f);
+
+        private string ResolveEpisodeOutcome()
+            => MatchRules.ToEpisodeOutcome(ResolveMatchOutcome(), BlueChassis.Team);
+
+        private void OnBlueArmorHit(string plateId, int damage, string sourceTeam)
         {
-            var raw = BlueChassis.OdomState();
-            raw["stamp_ns"] = stamp;
-            return raw;
+            RecordArmorHit(plateId, damage, sourceTeam, BlueChassis);
         }
 
-        private Dictionary<string, object> BuildEpisodeStats() => new Dictionary<string, object>
+        private void OnRedArmorHit(string plateId, int damage, string sourceTeam)
         {
-            { "episode_id", EpisodeId },
-            { "seed", SeedRng.CurrentSeed() },
-            { "duration_ns", NowNs() },
-            { "candidate_commit_sha", "" },
-            { "candidate_build_sha256", "" },
-            { "simulator_build_sha256", SimBuildSha },
-            { "opponent_policy_sha256", "" },
-            { "opponent_tier", OpponentTier },
-            { "outcome", ResolveOutcome() },
-            { "damage_dealt", _damageDealt },
-            { "damage_taken", BlueChassis.DamageTaken },
-            { "projectiles_fired", _projectilesFired },
-            { "armor_hits", _armorHits },
-            { "aim_latency_p50_ns", 0L },
-            { "aim_latency_p95_ns", 0L },
-            { "aim_latency_p99_ns", 0L },
-            { "events", new List<object>(_events) },
-        };
-
-        private string ResolveOutcome()
-        {
-            // HP is per-robot (Chassis.MaxHp). IsDestroyed fires when Hp hits
-            // 0; mutual destruction in the same tick falls through to TIMEOUT.
-            if (BlueChassis.IsDestroyed && !RedChassis.IsDestroyed) return "OUTCOME_LOSS";
-            if (RedChassis.IsDestroyed && !BlueChassis.IsDestroyed) return "OUTCOME_WIN";
-            return "OUTCOME_TIMEOUT";
+            RecordArmorHit(plateId, damage, sourceTeam, RedChassis);
         }
 
-        private void OnBlueArmorHit(string plateId, int damage, int sourceId)
-            => _events.Add(new Dictionary<string, object>
-            {
-                { "stamp_ns", NowNs() }, { "kind", "KIND_HIT_ARMOR" },
-                { "armor_id", plateId }, { "damage", damage },
-            });
-
-        private void OnRedArmorHit(string plateId, int damage, int sourceId)
+        private void RecordArmorHit(string plateId, int damage, string sourceTeam, Chassis target)
         {
-            _armorHits++;
-            _damageDealt += damage;
+            if (damage <= 0) return;
+            _rules.RecordArmorHit(sourceTeam, BlueChassis.Team, damage);
             _events.Add(new Dictionary<string, object>
             {
                 { "stamp_ns", NowNs() }, { "kind", "KIND_HIT_ARMOR" },
                 { "armor_id", plateId }, { "damage", damage },
             });
+            RegisterDeathIfNeeded(target);
+        }
+
+        private void ApplyTimedMatchRules()
+        {
+            float elapsedSeconds = NowNs() / 1_000_000_000f;
+            float dt = _rules.BeginRuleTick(elapsedSeconds);
+            if (dt <= 0f) return;
+
+            ApplyHealingZones(dt);
+            ApplyBoostPoints(dt);
+            ApplyRespawns(elapsedSeconds);
+            _rules.CoolFireHeat(dt);
+        }
+
+        private void ApplyHealingZones(float dt)
+        {
+            if (IsActiveNear(BlueChassis, SpawnPointBlue, HealingZoneRadius)) BlueChassis.Heal(dt);
+            if (IsActiveNear(RedChassis, SpawnPointRed, HealingZoneRadius)) RedChassis.Heal(dt);
+        }
+
+        private void ApplyBoostPoints(float dt)
+        {
+            _rules.World.UpdateBoostHolders(
+                TeamPositionsFor("red"),
+                TeamPositionsFor("blue"),
+                BoostPointHoldRadius);
+            RenderRuleZones();
+            _rules.World.CountHeldBoostPoints(out int redHeld, out int blueHeld);
+            _rules.ApplyBoostScoring(redHeld, blueHeld, dt);
+        }
+
+        private void ApplyRespawns(float elapsedSeconds)
+        {
+            ApplyRespawn(BlueChassis, elapsedSeconds);
+            ApplyRespawn(RedChassis, elapsedSeconds);
+        }
+
+        private void RegisterDeathIfNeeded(Chassis chassis)
+        {
+            if (chassis == null || !chassis.IsDestroyed) return;
+            if (_rules.World.RegisterDeath(RespawnKey(chassis), chassis.transform.position, chassis.ChassisYaw, NowNs() / 1_000_000_000f)
+                && chassis == BlueChassis)
+            {
+                _pendingShots = 0;
+            }
+        }
+
+        private void ApplyRespawn(Chassis chassis, float elapsedSeconds)
+        {
+            if (chassis == null) return;
+            if (!_rules.World.TryConsumeReadyRespawn(RespawnKey(chassis), elapsedSeconds, out RespawnPoint respawn)) return;
+            chassis.RespawnAt(respawn.Position, respawn.Yaw);
+        }
+
+        private List<TeamPosition> TeamPositionsFor(string team)
+        {
+            var positions = new List<TeamPosition>(2);
+            AddTeamPosition(positions, BlueChassis, team);
+            AddTeamPosition(positions, RedChassis, team);
+            return positions;
+        }
+
+        private static void AddTeamPosition(List<TeamPosition> positions, Chassis chassis, string team)
+        {
+            if (chassis == null || chassis.Team != team) return;
+            positions.Add(new TeamPosition(team, chassis.transform.position, !chassis.IsDestroyed));
+        }
+
+        private static string RespawnKey(Chassis chassis)
+            => chassis != null ? $"{chassis.Team}:{chassis.ChassisId}" : "";
+
+        private static bool IsActiveNear(Chassis chassis, Transform point, float radius)
+        {
+            if (chassis == null || point == null || chassis.IsDestroyed || radius <= 0f) return false;
+            Vector3 delta = chassis.transform.position - point.position;
+            delta.y = 0f;
+            return delta.sqrMagnitude <= radius * radius;
+        }
+
+        private void EnsureRuleMarkers()
+        {
+            RenderRuleZones();
+        }
+
+        private void RenderRuleZones()
+        {
+            Vector3 bluePosition = SpawnPointBlue != null ? SpawnPointBlue.position : BlueChassis.transform.position;
+            Vector3 redPosition = SpawnPointRed != null ? SpawnPointRed.position : RedChassis.transform.position;
+            RuleZonePresentation.Render(
+                bluePosition,
+                redPosition,
+                HealingZoneRadius,
+                _rules.World,
+                BoostPointHoldRadius);
+        }
+
+        private RuleZonePresentation RuleZonePresentation
+        {
+            get
+            {
+                if (_ruleZonePresentation == null)
+                {
+                    _ruleZonePresentation = GetComponent<RuleZonePresentation>();
+                    if (_ruleZonePresentation == null)
+                    {
+                        _ruleZonePresentation = gameObject.AddComponent<RuleZonePresentation>();
+                    }
+                }
+                return _ruleZonePresentation;
+            }
         }
 
         private long NowNs()
         {
-            return (_processClock.ElapsedMilliseconds - _startedTicksMs) * 1_000_000L;
+            return _clock.NowNs;
+        }
+
+        internal void AdvanceEpisodeClockForTest(float seconds)
+        {
+            _clock.AdvanceForTest(seconds);
+        }
+
+        internal void AllowNextShotForTest()
+        {
+            _nextShotTime = Time.time;
+        }
+
+        internal void DrainShotQueueForTest()
+        {
+            DrainShotQueue();
         }
 
         private static long AsLong(Dictionary<string, object> dict, string key, long fallback)
@@ -414,9 +508,5 @@ namespace TsingYun.UnityArena
         private static bool AsBool(Dictionary<string, object> dict, string key, bool fallback)
             => dict.TryGetValue(key, out var v) && v is bool b ? b : fallback;
 
-        private static Dictionary<string, object> Vec3Dict(Vector3 v) => new Dictionary<string, object>
-        {
-            { "x", (double)v.x }, { "y", (double)v.y }, { "z", (double)v.z },
-        };
     }
 }

@@ -17,7 +17,7 @@ void Imm::initialise(const StateVec& x0, const StateMat& P0) {
 }
 
 GaussianBelief Imm::step(double dt, const MeasVec& z, const MeasMat& R) {
-    // ----- TODO(HW3) part A: mixing.
+    // ----- TODO(HW3): part A: mixing.
     //
     // For each output mode j ∈ {0, 1}:
     //   c_j = Σ_i π_{ij} * mu_i                 (normaliser)
@@ -48,7 +48,7 @@ GaussianBelief Imm::step(double dt, const MeasVec& z, const MeasMat& R) {
                                              result.innovation_cov);
     }
 
-    // ----- TODO(HW3) part B: mode probability update.
+    // ----- TODO(HW3): part B: mode probability update.
     //
     //   mu_j_new = c_j * Λ_j   (un-normalised)
     //   then divide by Σ_k mu_k_new.
@@ -63,7 +63,7 @@ GaussianBelief Imm::step(double dt, const MeasVec& z, const MeasMat& R) {
     beliefs_ = updated;
     mu_ = mu_new;
 
-    // ----- TODO(HW3) part C: state combination.
+    // ----- TODO(HW3): part C: state combination.
     //
     //   x_comb = Σ_j mu_j * x_j
     //   P_comb = Σ_j mu_j * (P_j + (x_j - x_comb)(x_j - x_comb)^T)

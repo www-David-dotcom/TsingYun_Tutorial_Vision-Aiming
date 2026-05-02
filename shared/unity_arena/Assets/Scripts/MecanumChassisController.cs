@@ -2,19 +2,18 @@ using UnityEngine;
 
 namespace TsingYun.UnityArena
 {
-    // Pure-C# mecanum velocity solver. Extracted from chassis.gd:_physics_process
-    // so Bullet→PhysX drift cannot affect it. Math is line-by-line equivalent:
+    // Pure-C# mecanum velocity solver. Keeps chassis motion out of PhysX drift.
+    // Math:
     //
     //   v_x_world = vx_body * cos(yaw) - vy_body * sin(yaw)
     //   v_z_world = vx_body * sin(yaw) + vy_body * cos(yaw)
     //
-    // The four-wheel mecanum mixing is NOT simulated — Godot's CharacterBody3D
-    // doesn't model wheel slip and the RM rules don't punish ideal-kinematics
-    // simulators in a way that matters for HW1–HW7.
+    // The four-wheel mecanum mixing is not simulated; this remains an
+    // ideal-kinematics controller for the legacy HW reference modules.
     public class MecanumChassisController
     {
-        public float MaxLinearSpeed { get; set; } = 3.5f;
-        public float MaxAngularSpeed { get; set; } = 4.0f;
+        public float MaxLinearSpeed { get; set; } = GameConstants.ChassisMaxLinearSpeed;
+        public float MaxAngularSpeed { get; set; } = GameConstants.ChassisMaxAngularSpeed;
 
         public float ChassisYaw;
         public float CmdVx { get; private set; }
@@ -24,9 +23,18 @@ namespace TsingYun.UnityArena
 
         public void SetCmd(float vxBody, float vyBody, float omega)
         {
-            CmdVx = Mathf.Clamp(vxBody, -MaxLinearSpeed, MaxLinearSpeed);
-            CmdVy = Mathf.Clamp(vyBody, -MaxLinearSpeed, MaxLinearSpeed);
             CmdOmega = Mathf.Clamp(omega, -MaxAngularSpeed, MaxAngularSpeed);
+            float rotationLoad = MaxAngularSpeed > 0f ? Mathf.Abs(CmdOmega) / MaxAngularSpeed : 0f;
+            float linearScale = Mathf.Lerp(
+                1f,
+                GameConstants.ChassisFullRotationLinearSpeedScale,
+                Mathf.Clamp01(rotationLoad));
+            float cappedLinearSpeed = MaxLinearSpeed * linearScale;
+            Vector2 translation = Vector2.ClampMagnitude(
+                new Vector2(vxBody, vyBody),
+                cappedLinearSpeed);
+            CmdVx = translation.x;
+            CmdVy = translation.y;
         }
 
         // Advance the chassis state by deltaSeconds: integrate yaw, recompute
@@ -52,6 +60,11 @@ namespace TsingYun.UnityArena
             CmdVy = 0f;
             CmdOmega = 0f;
             WorldVelocity = Vector3.zero;
+        }
+
+        public static float BodyLocalYaw(float fixedMountYaw, float chassisYaw)
+        {
+            return chassisYaw - fixedMountYaw;
         }
     }
 }

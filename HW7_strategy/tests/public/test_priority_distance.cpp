@@ -6,7 +6,7 @@
 //     layer extra logic on top, but this rule must still hold)
 //
 // Skips when the stub returns -1 even on the trivial single-enemy
-// case (i.e. the TODO is unfilled).
+// case (i.e. the HW7 blank is unfilled).
 
 #include <gtest/gtest.h>
 

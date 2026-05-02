@@ -1,22 +1,21 @@
 # Aiming Arena — Unity 6 LTS HDRP project
 
-Stage 12 reform of `shared/godot_arena/`. Implements the simulator side
-of the contract from `shared/proto/aiming.proto` on Unity 6 LTS +
-HDRP, with a coordinated visual reform (multi-tier maze hybrid map,
-stylized chassis, neon palette, holographic UI). Companion to the
-spec at [`docs/superpowers/specs/2026-04-30-arena-art-vision-reform-design.md`](../../docs/superpowers/specs/2026-04-30-arena-art-vision-reform-design.md).
+Unity is the only active arena runtime. This project implements the game
+specified by [`schema.md`](../../schema.md): RoboMaster-inspired vehicles,
+armor plates with MNIST number tags, gimbal-mounted camera and barrel,
+team-based match rules, and a polished sci-fi maze environment.
 
 ## Quickstart (team)
 
 ```bash
 # 1. Install Unity 6 LTS via Unity Hub (project pinned at 6000.3.14f1).
 # 2. Open the project from Unity Hub: Open → <repo>/shared/unity_arena
-# 3. Open Assets/Scenes/ArenaMain.unity and click Play.
+# 3. Open Assets/Scenes/MapA_MazeHybrid.unity and click Play.
 # 4. In another terminal, drive the smoke:
-uv run python tools/scripts/smoke_arena.py --engine unity --seed 42 --ticks 10
+UV_CACHE_DIR=.uv-cache uv run python tools/scripts/smoke_arena.py --seed 42 --ticks 10
 ```
 
-## Wire layout (identical to Godot)
+## Runtime Wire Layout
 
 | Port | Role | Encoding |
 |------|------|----------|
@@ -24,9 +23,10 @@ uv run python tools/scripts/smoke_arena.py --engine unity --seed 42 --ticks 10
 | 7655 | Frame stream | 16-byte LE header (`<QQ frame_id stamp_ns>`) + RGB888 |
 
 JSON field names match `shared/proto/*.proto` exactly. The wire-format
-conformance test (`tests/test_arena_wire_format.py`) is parametrized
-over `[godot, unity]` and asserts both engines emit the same dict
-shapes.
+conformance test (`tests/test_arena_wire_format.py`) validates the Unity
+payload shape without launching the Editor. Candidate runners should treat
+[`docs/unity-wire-contract.md`](../../docs/unity-wire-contract.md) as the
+stable control/frame contract.
 
 ## Synty pack
 
@@ -40,10 +40,9 @@ the build if any `.fbx` is found in committed paths.
 
 ## Build (12d)
 
-Builds run via `tools/unity/build.sh --target {win-showcase,
-macos-showcase, linux-showcase, linux-headless}`, output to
-`shared/unity_arena/builds/`. Locally validate against the Tier 1–5
-regression suite before pushing to OSS.
+Release build automation is not part of the current cleanup priority. Local
+Editor Play mode is the supported runtime path until the game rules and visual
+design are repaired against `schema.md`.
 
 ## Tests
 
@@ -55,20 +54,18 @@ PlayMode tests: `Assets/Tests/PlayMode/`
 - `TcpProtoServerTests`, `TcpFramePubTests`, `ArenaMainEpisodeTests`
 
 Python wire conformance (no Unity needed): `tests/test_arena_wire_format.py`
+Local Unity smoke: `tools/scripts/smoke_arena.py`
 
 ## Project layout
 
 ```
 shared/unity_arena/
 ├── Assets/
-│   ├── Scenes/      ArenaMain.unity (placeholder), MapA_MazeHybrid.unity (12b)
-│   ├── Scripts/     10 C# files (port from GDScript + new MecanumChassisController)
-│   ├── Prefabs/     Chassis, Gimbal, ArmorPlate, Projectile, HoloProjector (12b)
-│   ├── Materials/   PBR materials (12c)
-│   ├── Shaders/     Shader Graph (12c)
-│   ├── VFX/         VFX Graph (12c)
-│   ├── Settings/    HDRPAsset_Showcase / _Headless, Volume profiles (12c)
-│   ├── UI/          HUD prefabs (12c)
+│   ├── Scenes/      ArenaMain.unity, MapA_MazeHybrid.unity
+│   ├── Scripts/     gameplay, wire protocol, replay, and frame streaming
+│   ├── Prefabs/     Chassis, Gimbal, ArmorPlate, Projectile, HoloProjector
+│   ├── Materials/   current Unity materials
+│   ├── Rendering/   HDRP asset
 │   ├── Tests/       EditMode + PlayMode
 │   └── Synty/       gitignored
 ├── Packages/manifest.json
@@ -76,12 +73,9 @@ shared/unity_arena/
 └── README.md
 ```
 
-## Headless rendering caveat
+## Rendering Caveat
 
 Unity HDRP cannot render without a GPU. The `linux-headless` build target
 disables DXR, drops to baked GI only, and uses low-LOD geometry; it still
 needs any GPU (Intel UHD / Apple Silicon / NVIDIA / AMD).
-`ubuntu-latest` GitHub-hosted runners have no GPU, so live-arena
-episodes never run in CI; CI only runs unit tests
-(`test_arena_wire_format.py`, `test_fetch_assets.py`, etc.).
-Live arena testing happens on the maintainer's GPU-equipped box.
+Live arena testing happens locally with Unity Editor or a future Unity build.

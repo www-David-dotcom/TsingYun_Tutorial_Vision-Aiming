@@ -2,7 +2,7 @@
 
 // Two-mode IMM (CV + CT). The mixing / per-mode update / mode
 // probability update / state combination are the four steps the
-// candidate fills via TODO(HW3) markers in source/imm.cpp.
+// candidate fills via TODO(HW3): markers in source/imm.cpp.
 //
 // Mode 0 = CV; mode 1 = CT with the configured turn rate.
 

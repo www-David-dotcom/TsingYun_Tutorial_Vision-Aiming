@@ -1,14 +1,14 @@
 # OSS asset distribution
 
-All blob assets — Godot binaries, datasets, opponent weights, the
-reference Docker image — live on Aliyun OSS in the `cn-beijing` region.
+All blob assets - datasets, opponent weights, exported Unity builds, and the
+reference Docker image - live on Aliyun OSS in the `cn-beijing` region.
 The repo carries text manifests; the resolver downloads on demand.
 
 ## Buckets
 
 | Bucket | Visibility | Contents | ACL |
 |---|---|---|---|
-| `tsingyun-aiming-hw-public` | anonymous-read | Godot binaries × 3 OSes; HW1 eval set + real holdout; HW2/3/4 fixtures; candidate-facing PDFs | public-read |
+| `tsingyun-aiming-hw-public` | anonymous-read | Unity builds; HW1 eval set + real holdout; HW2/3/4 fixtures; candidate-facing PDFs | public-read |
 | `tsingyun-aiming-hw-models` | private | bronze/silver/gold opponent `.pt` + checkpoints; reference detector ONNX; replay-bag fixtures > 50 MB | private; SSE-OSS |
 | `tsingyun-aiming-hw-cache`  | private | reference Docker image (`docker/toolchain/<tag>/`); vcpkg/uv caches | private |
 
@@ -42,10 +42,10 @@ source ~/.envrc.local
 uv run python shared/scripts/push_assets.py \
     --bucket tsingyun-aiming-hw-public \
     --visibility anonymous \
-    --key binaries/v0.5.0/godot/aiming_arena_linux_x86_64.zip \
-    --name godot-arena-linux-x64 \
+    --key builds/unity/0.1.0/aiming_arena_linux_x86_64.zip \
+    --name unity-arena-linux-x64 \
     --file out/builds/aiming_arena_linux_x86_64.zip \
-    --description "Godot arena binary, Linux x86_64"
+    --description "Unity arena build, Linux x86_64"
 ```
 
 That uploads the file, computes its sha256, and appends an idempotent
@@ -62,7 +62,7 @@ uv run python shared/scripts/fetch_assets.py --dry-run
 uv run python shared/scripts/fetch_assets.py
 
 # narrow to one or two
-uv run python shared/scripts/fetch_assets.py --only godot-arena-linux-x64
+uv run python shared/scripts/fetch_assets.py --only unity-arena-linux-x64
 ```
 
 Files land under `out/assets/<local_path>/...` (gitignored).

@@ -27,8 +27,8 @@ namespace TsingYun.UnityArena.Tests.EditMode
         public void DragForce_MagnitudeMatchesFormula()
         {
             // F = 0.5 * rho * Cd * A * |v|^2  (along -v)
-            // rho = 1.225, Cd = 0.47, A = 0.000227 (matches projectile.gd)
-            float speed = 27.0f;  // muzzle velocity
+            // rho = 1.225, Cd = 0.47, A = 0.000227.
+            float speed = GameConstants.BulletSpeedMetersPerSecond;
             Vector3 v = new Vector3(speed, 0f, 0f);
             Vector3 force = ProjectileDragSolver.QuadraticDragForce(v);
             float expected = 0.5f * 1.225f * 0.47f * 0.000227f * speed * speed;

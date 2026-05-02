@@ -1,5 +1,21 @@
 # HW7 — 战术 / Strategy Bonus
 
+> **Status:** Active as part of the Unity-first assignment path; older
+> standalone workflows in this folder are legacy reference.
+>
+> **Unity-first role:** Choose targets and retreat behavior for teammate
+> automation.
+>
+> **Legacy-only:** PPO training is optional stretch work, not required for the
+> core assignment.
+>
+> **Mini-test:** `ctest --preset linux-debug -R hw7`
+>
+> **Mini-test files:**
+> - `HW7_strategy/tests/public/test_bt_semantics.cpp`
+> - `HW7_strategy/tests/public/test_priority_distance.cpp`
+> - `HW7_strategy/tests/public/test_retreat_trigger.cpp`
+
 > 第七道作业（加分项）：给机器人写一个会做战术决策的大脑。
 > 用一个极简的 Behavior Tree DSL 描述决策逻辑，C++ 编译它来跑。
 > 两个 TODO（C++）：选目标 + 撤退判断。可选附加挑战：用 PPO 训
@@ -14,6 +30,43 @@
 > `src/train_ppo.py`.
 
 ---
+
+## Student Quickstart
+
+### Prerequisites
+
+- Complete the root [First-time setup](../README.md#first-time-setup).
+- Use the Docker toolchain for C++ mini-tests.
+- Optional PPO work needs `uv sync --group hw7`.
+
+### What to implement
+
+Fill the `TODO(HW7):` sites in:
+
+- `HW7_strategy/include/aiming_hw/strategy/behavior_tree.hpp`
+- `HW7_strategy/source/strategy.cpp`
+
+Start with behavior-tree tick semantics if those tests are skipping, then fill
+target selection and retreat logic.
+
+### Mini-test command
+
+```bash
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug -R hw7
+```
+
+### Expected first run
+
+Some tests can `GTEST_SKIP` while the strategy and behavior-tree blanks are
+unfilled. Each completed `TODO(HW7):` block should convert its related skips to
+passes.
+
+### Before moving on
+
+Run `ctest --preset linux-debug -R hw7`. Since HW7 is a bonus stage, make sure
+A1-A6 mini-tests are already passing before spending time on PPO.
 
 ## 设计 / Design
 
@@ -115,7 +168,7 @@ uv run python HW7_strategy/src/train_ppo.py \
 
 The scaffold uses a stub env that emits canned observations; the
 candidate's first task in this sub-skill is to swap in a real
-gRPC-backed env that talks to the Stage-2 arena. Stretch goal:
+gRPC-backed env that talks to the Unity arena. Stretch goal:
 plug in [`sample-factory`](https://github.com/alex-petrenko/sample-factory)
 for parallel rollouts (manual `pip install sample-factory` — kept
 out of the declared deps because of platform finickiness).
@@ -130,5 +183,4 @@ out of the declared deps because of platform finickiness).
 * Full game-theoretic equilibrium analysis.
 * The `gold` opponent policy itself — that's a team-side training
   job; HW7 candidates pull it via fetch_assets and play against it.
-* Hidden grading episodes (5 vs gold) — deferred per
-  `IMPLEMENTATION_PLAN.md` Stage 10.
+* Hidden grading episodes — grading must be redesigned from `schema.md`.

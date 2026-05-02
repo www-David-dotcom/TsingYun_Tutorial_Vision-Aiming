@@ -1,6 +1,6 @@
 #pragma once
 
-// HW7 strategy decision points. Two TODO(HW7) targets that the leaf
+// HW7 strategy decision points. Two TODO(HW7): targets that the leaf
 // actions in leaf_actions.cpp call. Splitting these out from the
 // leaves means the public unit tests can drive them directly without
 // instantiating the full BT runtime.
@@ -39,7 +39,7 @@ struct SelfInfo {
 // of (close, low-HP, not-ally); the tests pin "closest enemy wins"
 // as the floor.
 //
-// IMPLEMENT THIS — TODO(HW7).
+// TODO(HW7): implement target priority selection.
 int pick_target(const SelfInfo& self, const std::vector<TrackInfo>& tracks);
 
 // Decide whether the BT should switch from engage to retreat. True
@@ -47,10 +47,10 @@ int pick_target(const SelfInfo& self, const std::vector<TrackInfo>& tracks);
 // rule combines low HP, low ammo, and recent damage; tests pin the
 // HP threshold (≤ 30) and the ammo threshold (≤ 20) as the floor.
 //
-// IMPLEMENT THIS — TODO(HW7).
+// TODO(HW7): implement retreat trigger logic.
 bool should_retreat(const SelfInfo& self, const std::vector<TrackInfo>& tracks);
 
-// Helpers exposed for the TODO bodies (filled).
+// Helpers exposed for the TODO(HW7): bodies (filled).
 double squared_distance(double ax, double ay, double bx, double by);
 
 }  // namespace strategy

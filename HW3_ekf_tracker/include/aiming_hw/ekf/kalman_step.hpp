@@ -1,7 +1,7 @@
 #pragma once
 
-// Kalman step primitives. `predict` and `update` are the two TODO
-// targets for HW3 — the candidate writes the math, the rest of the
+// Kalman step primitives. `predict` and `update` are the two TODO(HW3):
+// targets - the candidate writes the math, the rest of the
 // EKF (motion models, IMM, multi-target) is filled.
 //
 // Joseph-form covariance update is required for `update` — the IMM's
@@ -32,7 +32,7 @@ struct UpdateResult {
 
 // Predict step: x = F x; P = F P F^T + Q.
 //
-// IMPLEMENT THIS — TODO(HW3).
+// TODO(HW3): implement the linear Kalman predict step.
 GaussianBelief predict(const GaussianBelief& belief,
                        const StateMat& F,
                        const StateMat& Q);
@@ -41,7 +41,7 @@ GaussianBelief predict(const GaussianBelief& belief,
 // (from motion_models::measurement_matrix) to fuse z under additive
 // noise R. Use the Joseph-form covariance update for stability.
 //
-// IMPLEMENT THIS — TODO(HW3).
+// TODO(HW3): implement the EKF update step.
 UpdateResult update(const GaussianBelief& belief,
                     const MeasVec& z,
                     const MeasMat& R);

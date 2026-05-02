@@ -52,8 +52,8 @@ docker compose -f shared/docker/toolchain.compose.yaml run --rm dev
 Aliyun OSS is the team's chosen object store (see `docs/oss_assets.md`)
 and CN-region pull speeds are dramatically better than ghcr.io for the
 candidate population. Pushing to OSS via the `cache` bucket lets us treat
-the image as just another versioned artifact alongside Godot binaries and
-opponent weights.
+the image as just another versioned artifact alongside Unity builds, datasets,
+and opponent weights.
 
 If we ever need to expose the image internationally, we can mirror to
 ghcr.io as a secondary; the OSS path stays canonical.

@@ -22,13 +22,13 @@ namespace strategy {
 
 // Pick the highest-priority track and write its position into the
 // blackboard's "target.x" / "target.y" slots. Calls `pick_target`
-// (TODO in strategy.cpp) under the hood.
+// (TODO(HW7): in strategy.cpp) under the hood.
 //
 // Returns Failure if no tracks visible; Running while engaging.
 Status engage(Blackboard& bb);
 
 // Pull back to the nearest cover spot. Triggered by `retreat_logic`
-// (TODO in strategy.cpp) — the BT typically wraps engage and
+// (TODO(HW7): in strategy.cpp) - the BT typically wraps engage and
 // retreat in a Selector with retreat checked first.
 Status retreat_to_cover(Blackboard& bb);
 

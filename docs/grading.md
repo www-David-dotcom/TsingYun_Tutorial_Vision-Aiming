@@ -1,5 +1,16 @@
 # 评分流程 / Grading workflow
 
+## Legacy grading workflow
+
+This document records the old public-test and leaderboard process. It is
+legacy-only until the Unity-first assignment path is fully implemented.
+
+## Milestone 3 grading stance
+
+For the Unity-first redesign, grading starts with local mini-tests for partial
+completion. A live Unity evaluation is deferred until the A6 runner and
+Milestone 4 training-ground/runtime pieces are stable.
+
 > 本作业的评分采用**自动评分公开测试 + 人工面试**的两段制。
 > 公开测试在 GitHub Actions 上跑，PR 一开就有反馈；最终录取由
 > 队里在 PR 截止后人工 review + 面试 top-N 决定。
@@ -168,4 +179,4 @@ Proposal A 是最低成本起步方案。下一轮可能会加：
 * **build-artefact 哈希绑定** —— 让 score JSON 同时含 build SHA 和
   seed-manifest hash，更难造假。
 
-详情见 `IMPLEMENTATION_PLAN.md` Stage 10 v1 § "future cycles" 部分。
+新的隐藏测试和现场评估流程需要按 `schema.md` 重新设计。

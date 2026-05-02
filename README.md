@@ -1,90 +1,146 @@
-# TsingYun Tutorial — Vision Aiming HW
+# TsingYun Aiming Arena
 
-> 青云战队视觉组招新作业模板。Recruitment-cycle assignment template for the
-> TsingYun RoboMaster Vision Group.
->
-> **Stage 1 baseline.** Per-HW directories (HW1–HW7) land in later stages
-> per [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
+Unity-based RoboMaster self-aiming game and recruitment assignment workspace
+for the TsingYun Vision Group.
 
----
-
-## 如何完成作业 (For candidates)
-
-1. **Fork** 本仓库到自己的 GitHub 账号下。
-2. **Clone** 你 Fork 的仓库到本地。
-3. 在本地完成作业（HW1 起，按顺序），提交并推送到你 Fork 的仓库。
-4. 在 GitHub 上向原仓库提交 Pull Request，等待回复。
-
-### 作业要求
-
-1. Pull Request 标题请改为 `姓名 - 学号`，需要在 description 中提交以下信息：
-   - 代码功能展示
-   - 遇到的问题与反馈（如果有）
-2. 请注意 Git 提交规范，保持提交记录清晰。
-3. **不要上传敏感信息**，如 API 密钥、密码等（OSS 凭据通过环境变量提供，
-   见 [`docs/oss_assets.md`](docs/oss_assets.md)）。
-
-> 评分流程与排行榜机制目前**暂未确定**——见 [`schema.md`](schema.md) §7。
-> 当前阶段专注于把作业本身设计好；评分细则将在 HW 脚手架完成之后另行设计。
+[`schema.md`](schema.md) is the highest-priority specification. The active
+candidate assignment path is the Unity-first A1-A7 sequence in
+[`docs/assignment-redesign.md`](docs/assignment-redesign.md).
 
 ---
 
-## What's here (English overview)
+## Current Focus
 
-* [`schema.md`](schema.md) — assignment design (scenario, simulator,
-  per-HW deep-dives, toolchain, roadmap).
-* [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) — per-stage delivery
-  plan with acceptance criteria.
-* [`shared/`](shared/) — common infrastructure that every HW reuses:
-  protobuf wire format, CMake helpers, OSS asset tooling, reference
-  Docker image, gRPC + ZMQ stub servers.
-* [`tests/`](tests/) — round-trip tests on the wire format, smoke tests
-  on the asset resolver.
-* [`docs/`](docs/) — CHANGELOG, architecture overview, OSS access
-  instructions.
+1. Preserve local Unity runtime functionality.
+2. Repair code and docs to match `schema.md`.
+3. Keep HW1-HW7 aligned with the Unity-first A1-A7 candidate sequence.
+4. Implement the game rules, RL training loop, training-ground scene, and visual
+   polish after cleanup.
 
-Grading workflow and leaderboard are deliberately deferred — see
-[`schema.md`](schema.md) §7. This repo currently focuses on getting the
-homework scaffolds right.
+## Who this is for
 
-## Quickstart (for the team / TAs)
+This repository is for candidates who are building a self-aiming RoboMaster
+runner one stage at a time. You do not need to understand Unity on day one.
+Start with the current assignment folder, fill only the `TODO(HWn):` blanks,
+run that stage's mini-tests, then move to the next stage.
 
-```bash
-# 1. Install uv (once)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+## Install prerequisites
 
-# 2. Sync the Python workspace
-uv sync
+- Git.
+- Python 3.11 or newer.
+- `uv` for Python dependencies: <https://docs.astral.sh/uv/getting-started/installation/>.
+- Docker Desktop or Docker Engine for the canonical C++ toolchain.
+- Unity 6 LTS only when you reach A6 runner integration or want to smoke the
+  live arena.
 
-# 3. Smoke the gRPC stub server + ZMQ frame publisher
-uv run aiming-stub-server --once &
-uv run aiming-frame-pub --max-frames 60
+Native C++ builds also need CMake and Ninja. The Docker image is the supported
+student path because it already includes Eigen 3.4, gRPC, Protobuf, and the
+compiler version used by the mini-tests.
 
-# 4. Pull the reference toolchain image (multi-arch amd64+arm64)
-docker pull tsingyun-aiming-hw-cache.oss-cn-beijing.aliyuncs.com/docker/toolchain/0.5.0:latest
-
-# 5. Configure + build C++ inside the image
-docker compose -f shared/docker/toolchain.compose.yaml run --rm dev \
-    bash -c "cmake --preset linux-debug && cmake --build --preset linux-debug && ctest --preset linux-debug"
-```
-
-## Quickstart (for candidates — preview)
-
-Once HW1+ stages land, the candidate flow will be:
+## First-time setup
 
 ```bash
 git clone <your-fork-url>
-cd TsingYun_Tutorial_Vision-Aiming
-uv sync
-uv run python shared/scripts/fetch_assets.py        # pull Godot + datasets
-docker compose -f shared/docker/toolchain.compose.yaml run --rm dev \
-    bash -c "cmake -B build && cmake --build build"
+cd Aiming_HW
 
-# work on HW1, run the public unit tests
-cd HW1_armor_detector && pytest tests/public/
+# Python workspace and no-Unity checks.
+uv sync
+uv run pytest tests/test_assignment_design.py tests/test_assignment_mini_commands.py -q
+
+# Canonical C++ environment.
+docker compose -f shared/docker/toolchain.compose.yaml run --rm dev
+# Inside the container, from /workspace:
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug
 ```
 
-## Repo layout (current)
+On macOS you may use `cmake --preset macos-debug` and
+`cmake --build --preset macos-debug`, but some C++ stages can be skipped if
+your local package manager provides Eigen 5 instead of Eigen 3.4. Docker avoids
+that mismatch.
+
+## Assignment workflow
+
+1. Open [`docs/assignment-redesign.md`](docs/assignment-redesign.md) and find
+   your active stage A1-A7.
+2. Open that HW folder's README and read its `Student Quickstart`.
+3. Fill only the `TODO(HWn):` sites named by the README.
+4. Run the stage mini-test command before touching the next stage.
+5. Use the Unity smoke test only after A6 has a runner that can talk to the
+   arena.
+
+## Mini-test quick reference
+
+| Stage | Folder | Mini-test command |
+|---|---|---|
+| A1 | `HW1_armor_detector` | `uv run pytest HW1_armor_detector/tests/public/test_assign_targets.py HW1_armor_detector/tests/public/test_loss_shapes.py` |
+| A2 | `HW2_tf_graph` | `ctest --preset linux-debug -R hw2` |
+| A3 | `HW3_ekf_tracker` | `ctest --preset linux-debug -R hw3` |
+| A4 | `HW4_ballistic` | `ctest --preset linux-debug -R hw4` |
+| A5 | `HW5_mpc_gimbal` | `ctest --preset linux-debug -R hw5` and `uv run pytest HW5_mpc_gimbal/tests/public/test_cost.py` |
+| A6 | `HW6_integration` | `ctest --preset linux-debug -R hw6` |
+| A7 | `HW7_strategy` | `ctest --preset linux-debug -R hw7` |
+
+For C++ commands, run `cmake --preset linux-debug` and
+`cmake --build --preset linux-debug` first inside the Docker toolchain
+container.
+
+## Unity Quickstart
+
+```bash
+# 1. Open the Unity project in Unity 6 LTS.
+#    Project path: shared/unity_arena
+
+# 2. In Unity, open:
+#    Assets/Scenes/MapA_MazeHybrid.unity
+
+# 3. Enter Play mode, then smoke the local control surface:
+UV_CACHE_DIR=.uv-cache uv run python tools/scripts/smoke_arena.py --seed 42 --ticks 10
+```
+
+Unity publishes:
+
+- Control RPC: `tcp://127.0.0.1:7654`
+- RGB frame stream: `tcp://127.0.0.1:7655`
+
+## Local Checks
+
+No-Unity checks:
+
+```bash
+UV_CACHE_DIR=.uv-cache uv run pytest tests/test_arena_wire_format.py -q
+```
+
+Stage mini-test C++ checks:
+
+```bash
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug
+```
+
+## Troubleshooting
+
+- `ctest --preset linux-debug` says no build directory exists: run
+  `cmake --preset linux-debug` and `cmake --build --preset linux-debug` first.
+- Eigen, gRPC, or Protobuf is missing on your host: use the Docker toolchain.
+- Python tests skip because `torch`, `casadi`, or `scipy` is missing: install
+  the stage group, for example `uv sync --group hw1`, `uv sync --group hw3`,
+  `uv sync --group hw5`, or `uv sync --group hw7`.
+- Unity smoke cannot connect: open `shared/unity_arena` in Unity 6 LTS, load
+  `Assets/Scenes/MapA_MazeHybrid.unity`, and enter Play mode before running
+  `tools/scripts/smoke_arena.py`.
+
+## Candidate Assignments
+
+The active assignment design is now documented in
+[`docs/assignment-redesign.md`](docs/assignment-redesign.md). HW1-HW7 remain
+as implementation/reference folders, but candidates should follow the
+Unity-first A1-A7 path and use each stage's mini-tests for partial progress.
+
+## Repo Layout
+
 
 ```
 Aiming_HW/
@@ -92,9 +148,7 @@ Aiming_HW/
 ├── pyproject.toml            # uv workspace root
 ├── .clang-format / .editorconfig
 ├── schema.md
-├── IMPLEMENTATION_PLAN.md
 ├── docs/
-│   ├── CHANGELOG.md
 │   ├── architecture.md
 │   └── oss_assets.md
 ├── shared/
@@ -102,20 +156,17 @@ Aiming_HW/
 │   ├── cmake/                # ProtoTargets, UvFetch
 │   ├── assets/manifest.toml  # OSS-hosted asset manifest
 │   ├── scripts/              # fetch_assets.py, push_assets.py
-│   ├── grpc_stub_server/     # Python stand-in for the Godot arena
+│   ├── unity_arena/          # Unity 6 LTS game project
+│   ├── grpc_stub_server/     # legacy proto tooling support
 │   ├── zmq_frame_pub/        # synthetic 720p RGB stream
 │   └── docker/               # reference toolchain image
+├── HW1_armor_detector/ ... HW7_strategy/
+│                              # Unity-first A1-A7 assignment modules
 └── tests/
     ├── proto_roundtrip_test.cpp
+    ├── test_arena_wire_format.py
     └── test_fetch_assets.py
 ```
-
-HW1–HW7 directories appear in later stages per
-[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md).
-
----
-
-<div align="center"><b>👋 欢迎线下线上的交流讨论</b></div>
 
 ## License
 

@@ -1,5 +1,21 @@
 # HW3 — EKF + IMM 多目标跟踪器 / EKF + IMM Multi-Target Tracker
 
+> **Status:** Active as part of the Unity-first assignment path; older
+> standalone workflows in this folder are legacy reference.
+>
+> **Unity-first role:** Smooth armor detections into target tracks for aim
+> prediction.
+>
+> **Legacy-only:** CSV fixture replay remains a mini-test harness, not a full
+> live-arena tracker evaluation.
+>
+> **Mini-test:** `ctest --preset linux-debug -R hw3`
+>
+> **Mini-test files:**
+> - `HW3_ekf_tracker/tests/public/test_cv_predict.cpp`
+> - `HW3_ekf_tracker/tests/public/test_imm_mode_probabilities.cpp`
+> - `HW3_ekf_tracker/tests/public/test_da_simple.cpp`
+
 > 第三道作业：在 HW1 检测器的输出上接一个扩展卡尔曼滤波器（EKF）+
 > 交互多模 IMM（CV + CT），再加上多目标 Hungarian 关联。所有的数学
 > 都已经在 `reference/ekf_python.py` 里写好了——你的工作是把它在
@@ -13,6 +29,44 @@
 > target — read it first, then write the C++.
 
 ---
+
+## Student Quickstart
+
+### Prerequisites
+
+- Complete the root [First-time setup](../README.md#first-time-setup).
+- Use the Docker toolchain for C++ mini-tests.
+- Optional fixture regeneration needs `uv sync --group hw3`.
+
+### What to implement
+
+Fill the `TODO(HW3):` sites in:
+
+- `HW3_ekf_tracker/source/kalman_step.cpp`
+- `HW3_ekf_tracker/source/motion_models.cpp`
+- `HW3_ekf_tracker/source/imm.cpp`
+- `HW3_ekf_tracker/source/data_association.cpp`
+
+Use `HW3_ekf_tracker/reference/ekf_python.py` as the numerical spec.
+
+### Mini-test command
+
+```bash
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug -R hw3
+```
+
+### Expected first run
+
+Before implementation, tests that depend on a blank can `GTEST_SKIP`. After
+each `TODO(HW3):` block is filled, rerun the command and watch the related
+skip become a pass.
+
+### Before moving on
+
+Run `ctest --preset linux-debug -R hw3` inside the Docker toolchain. The EKF,
+IMM, and association suites should pass before starting ballistics.
 
 ## 文件 / Where to look
 
@@ -83,5 +137,4 @@ stays green during stage close.
   feeds projected positions, not raw camera angles).
 * JPDA, MHT, or other probabilistic data-association schemes —
   Hungarian + gating is what the production stack uses.
-* Hidden grading (NEES coverage, RMSE bars) is deferred per
-  `IMPLEMENTATION_PLAN.md` Stage 10.
+* Hidden grading — grading must be redesigned from `schema.md`.

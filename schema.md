@@ -1,592 +1,92 @@
-# Aiming_HW — Recruitment Coding-Assignment Design Schema
+I'm an engineer working in a RoboMaster team, responsible for the design and
+implementation of the robot's self-aiming system. Now we're recruiting new
+members to join our team. As a way of evaluating the candidates' skills and
+knowledge, we're going to design a game that incorporates a self-aiming system.
+The coarsest description of the game is:
 
-> Plan version 0.4 — **grading workflow and leaderboard policy are deferred** to a separate design pass once HW1–HW7 scaffolds exist (Stages 1–9 in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)). This document is now scoped to the homework design itself: scenario, simulator, per-HW deep-dives, toolchain, and roadmap. §7 is a placeholder. We'll redesign grading once we know what we're actually grading.
-> Audience: TsingYun RoboMaster Vision Group leads. Schema language: English. Per-HW READMEs: **Chinese primary with an English summary block** (per §10 decision 5).
-> Companion repository: [`RM_Vision_Aiming/`](../RM_Vision_Aiming) (the production self-aiming pipeline this assignment is derived from). Candidate-facing repo: [`www-David-dotcom/TsingYun_Tutorial_Vision-Aiming`](https://github.com/www-David-dotcom/TsingYun_Tutorial_Vision-Aiming).
+- Game: based on Unity.
+- Code: written in Python or C++. Only a scaffold will be provided; candidates
+  are expected to complete the code by themselves to implement the self-aiming
+  system.
 
----
+## Visual design of the game
+Here's an upper-level expectation:
 
-## 0. TL;DR — what we propose
+> The game adopts a high-fidelity futuristic sci-fi 3D rendering style with a sleek cyberpunk industrial aesthetic for the maze environment. The entire maze is constructed with interlocking angular geometric structures, featuring smooth matte metallic walls, glossy carbon-fiber partition panels, and transparent tempered glass barriers embedded with luminous circuit lines. All assets apply physically based rendering (PBR) with precise metallic and roughness texture mapping, delivering realistic material reflections and surface texture layering.Volumetric ray-traced lighting dominates the scene: cool-toned cyan, electric blue and magenta neon light strips run along maze edges, corridor ceilings and wall gaps, casting soft bloom glows and long light trails in the air. Subtle atmospheric fog pervades the enclosed maze space, with dynamic light particles drifting slowly, enhancing the sense of depth and futuristic vastness. Ambient occlusion softens the shadow corners of maze intersections and structural corners, while real-time reflection on glass and metal surfaces mirrors agent silhouettes and neon light halos.Multi-agent characters are designed with streamlined futuristic tactical exoskeletons, rendered with gradient luminous armor lines, semi-transparent energy shield outlines, and subtle specular highlights on mechanical joints. Each agent features distinct glowing color identifiers on their chest and back for easy team and enemy distinction in the complex maze. FPS weapons adopt minimalist sci-fi firearm modeling with luminous power cores on the body, muzzle flash particle effects with dynamic light diffusion, and shell casings that cast tiny real-time shadows when bouncing on the ground.Holographic floating interfaces hover above maze intersections and key nodes, displaying mini-map projections, grid coordinate lines and glowing warning markers with semi-transparent alpha blending. The overall color palette is dominated by cold dark gray and deep black as the base, paired with high-saturation neon accent colors, creating a high-contrast, immersive tech-driven visual atmosphere. Dynamic post-processing effects including chromatic aberration, subtle lens vignetting and motion blur are applied to strengthen the first-person shooting immersion and futuristic sci-fi tension within the labyrinthine map.
 
-A **single-scenario, multi-stage coding gauntlet** called **"Aiming Arena"**: a 3D first-person adversarial shooter in which the candidate's C++ aiming stack faces off against a frozen population of RL-trained "ghost" robots inside a custom simulator. The candidate progresses through **six required sub-projects (HW1–HW6) plus one bonus (HW7)** — each a separate ROS2-style C++ package or Python module, each with prebuilt scaffolding and `TODO` slots. HW7 is genuinely optional. Grading workflow and leaderboard mechanics are **deferred** (see §7); this schema is scoped to the homework design itself.
+The arena has already been started in Unity, but it still lacks the visual
+quality described above. Future plans must treat this document as the highest
+priority source of truth.
 
-Recommended stack:
+# Game Objects
+- Vehicle: An agent with HP. It attacks by firing bullets. The vehicle is surrounded by 4 armor plates, divided into red and blue types. Each armor plate is printed with an MNIST sticker marked with a digit from 0 to 9, which represents the unique ID of the vehicle (one unique number per vehicle). The sticker is slightly smaller than the armor plate so that the underlying red or blue color of the plate remains visible. The red color is pure hex `#FF0000` and blue is pure hex `#0000FF`, using high-saturation solid colors instead of pale tints. Bullets only deal damage when hitting armor plates. Only the vehicle body has HP; armor plates have no independent HP, and any hit on an armor plate deducts HP directly from the vehicle itself. The vehicle can perform translational movement and self-rotation. Self-rotation makes it harder for enemy bullets to land on armor plates. Following real-world robot heat constraints, continuous chassis rotation reduces the maximum translational speed. Only the chassis rotates during self-rotation; the gimbal remains fixed and does not rotate along with the chassis.
+- Gimbal: Mounted on top of the vehicle, equipped with a gun barrel and an adjacent camera. The camera serves as the player’s observation view and acts as the foundation for subsequent auto-aim implementation. The gimbal supports full 360° horizontal rotation, and the gun barrel’s pitch is constrained between -25° and 25°. It can fire at a rate of 5 rounds per second. Simulating real competition heat control mechanics, continuous prolonged firing triggers a forced fire lock; shooting can only resume after heat drops back to a safe threshold.
+- Bullet: A 17mm spherical projectile traveling at 20 m/s along a parabolic trajectory. Each successful hit on an enemy armor plate deals 20 damage. Bullets deal no damage if hitting any part of a vehicle other than its armor plates. Damage values are consistent regardless of hitting teammates or opponents.
+- Armor Plate: Emits a brief flash effect when struck by a bullet.
 
-| Layer | Choice | Reason |
-|---|---|---|
-| **Game engine / simulator** | **Godot 4 + [Godot RL Agents](https://github.com/edbeeching/godot_rl_agents)** as primary; **Unity 2023 LTS + ML-Agents** as visual-fidelity fallback | Godot is MIT, cross-platform, ships an FPS RL example out of the box, builds standalone executables for Win/macOS/Linux from a single `.tscn`. Unity is the contingency if visuals fall short. |
-| **Engine ⇄ Python comm** | **gRPC + Protobuf** for typed RPC; **ZeroMQ (PUB/SUB)** for high-rate sensor streams | gRPC matches the pattern Unity ML-Agents uses; ZMQ avoids serialization overhead for image frames. |
-| **Engine ⇄ C++ comm** | Same gRPC service compiled with the C++ codegen; image stream over shared memory on Linux/macOS, named pipes on Windows | Lets the candidate's C++ binary talk to the simulator with the same contract as Python tooling. |
-| **Frozen opponent agents** | Trained offline with **[Sample Factory 2](https://github.com/alex-petrenko/sample-factory)** + **[PettingZoo](https://pettingzoo.farama.org/)** parallel API | Highest known single-machine throughput on VizDoom/Megaverse-class envs; PettingZoo gives us self-play and adversarial training for free. |
-| **ML training** | Python ≥ 3.11, **`uv`** for env/lock management, PyTorch ≥ 2.4, ONNX export | `uv` is fast, deterministic, cross-platform; ONNX makes C++ inference engine-agnostic. |
-| **C++ build** | **CMake ≥ 3.22** + **[basis-robotics/uvtarget](https://github.com/basis-robotics/uvtarget)** to glue Python venvs into CMake builds, **[Eigen 3](https://eigen.tuxfamily.org/)**, **[ONNX Runtime](https://onnxruntime.ai/)**, **[CasADi](https://web.casadi.org/) / [acados](https://docs.acados.org/)** for MPC | All three are MIT/BSD/LGPL and run on Win/macOS/Linux; `uvtarget` solves the Python-in-CMake friction. |
-| **Submission & grading** | *Deferred — see §7* | We will design grading after the HW scaffolds (Stages 1–9) are built. Until then, every HW description focuses on what the homework teaches and measures, not on how the team converts those measurements into a recruiting decision. |
+# Game Rule
+The game is split into Red Team and Blue Team. Players are randomly assigned to one of the two teams. The upper-level game logic passes team information to lower-level modules via boolean flags, allowing the auto-aim system to identify its own team faction. The match supports 1v1, 2v2, or 3v3 vehicle configurations, with all vehicles on the same team assigned distinct ID numbers. Red Team vehicles spawn at a fixed corner spawn point, while Blue Team vehicles spawn diagonally at the opposite corner. Vehicle base HP scales with team size: 300 HP for 1v1, 500 HP for 2v2 per vehicle, and 700 HP for 3v3 per vehicle. The player always controls the vehicle with the maximum HP. Spawn points double as team healing zones; any vehicle within range regenerates 10 HP per second. Two score boost points spawn randomly and uniformly across the map. Any team holding proximity to a boost point gains 3 points per second. Vehicles respawn at their death position with full HP after a 10-second delay upon being eliminated. Each match lasts exactly 5 minutes. Victory conditions are defined as follows: If one team reaches 200 boost points first, they win immediately. If the 5-minute timer ends, the team with higher boost point total wins. If boost points are tied, total damage dealt is compared, with the higher damage team declared the winner. If all above conditions are tied, the match ends in a draw.
 
-We strongly recommend the **single-scenario** option (Option B in the README) because (a) the visual feedback loop — watching your robot win or die in a 3D arena — is what makes the assignment "scenically attractive"; (b) every HW remains discoverable in one shared mental model; (c) the same simulator binary serves both interactive play and any future grading harness. Building it is real work, but **roughly 70% of the engine effort is one-time and shared across all HWs**, so the marginal cost per HW is small.
+All AI vehicles except the player are controlled by a trained reinforcement learning policy. The learned policy is required to master the following behaviors:
+- When at full/adequate HP: Learn to occupy the nearest boost point, and actively engage enemy vehicles within visual range (avoid passive behavior where multiple vehicles occupy separate boost points without engaging each other).
+- When low on HP: Learn to take cover behind obstacles or return to the spawn healing zone, and avoid direct confrontation with enemies.
+- When under enemy fire: Learn to activate chassis self-rotation to increase the difficulty for enemies to hit its armor plates.
 
----
+The RL policy is trained directly within this Unity game simulation environment.
 
-## 1. Scenario design — "Aiming Arena"
+All non-player agents use a baseline aiming strategy that targets the geometric center of enemy vehicles by default. The player uses manual aiming and firing controls. After students complete and implement the auto-aim system, they can toggle both themselves and all teammate vehicles into full auto-aim mode with one click.
 
-### 1.1 World
+# Game stats
+At the end of each match, the system outputs the player’s individual hit rate and the overall team hit rate.
 
-* **Setting**: a near-future / sci-fi indoor industrial complex (think *Titanfall* training arena meets a RoboMaster venue — neon-lit catwalks, blinking holo-panels, low-poly cargo crates).
-* **Map**: one shipped at v1, three by v3. Each map is a **bounded arena** ≈ 20 m × 20 m with multi-level catwalks, breakable cover, and a few "speed strips" that boost robot translational velocity. Lighting transitions between bright/strobe/blackout at scripted intervals to stress vision robustness.
-* **Robots**: 4-wheel mecanum chassis with an independent yaw/pitch gimbal — **kinematics are a faithful simplification of a RoboMaster Standard robot** so the assignment has direct skill transfer.
-* **Armor plates**: every robot carries 4 armor plates (front/back/left/right) bearing a class icon (Hero / Engineer / Standard / Sentry). Armor lights glow blue or red to identify team. **Hits register only on an armor plate**, mirroring the real RoboMaster rule and giving the detection task a clear semantic target — see [DeanFrancis 2025 RoboMaster auto-target paper](https://www.deanfrancispress.com/index.php/te/article/view/3583) and [arXiv:2312.05055](https://arxiv.org/html/2312.05055v1).
-* **Projectiles**: simulated 17 mm pellets with realistic muzzle velocity (~25 m/s), gravity, and air-drag (linear-quadratic). Firing rate, projectile spread, and "barrel heat" cap are configurable per HW so simpler tasks can disable nuisance physics.
-* **Camera**: every robot streams a 1280×720 RGB feed at 60 fps from its gimbal; this is the *only* perception input the candidate's stack receives. Optionally a depth channel can be unlocked for the easiest HW to sidestep PnP for warm-up purposes.
-
-### 1.2 Adversaries — the "Ghost" RL bots
-
-Each map ships with three opponent skill tiers, each a **frozen PPO policy** trained in Sample Factory:
-
-| Tier | Behaviour | Training time | Used in |
-|---|---|---|---|
-| `bronze` | Patrols, slow turret swing, fires only inside a short range | 4 h on 1 GPU | HW1–HW3 |
-| `silver` | Strafes, takes cover, mid-range fire | 24 h on 1 GPU | HW4–HW6 |
-| `gold` | Aggressive, swap-targets, juke maneuvers, predictive aim | self-play 3 days × 4 GPUs | HW7 |
-
-Bots receive the same observations a human would (pixel feed + IMU + chassis odometry), so the candidate's stack is competing on equal sensory footing. Their policies are frozen `.pt` files hosted in the private OSS bucket `tsingyun-aiming-hw-models` (`cn-beijing`) and pulled into `out/assets/` on demand by `shared/scripts/fetch_assets.py`. Policies are not retrained during the recruitment cycle, so episode outcomes are reproducible across runs of the same code against the same seed.
-
-### 1.3 Episode shape
-
-Each match is a **90-second deathmatch** (1 vs 1 by default; HW7 unlocks 2 vs 2). Within an episode, both robots spawn at randomized positions, the timer counts down, and the match ends when either side is destroyed or the clock runs out. Per-episode telemetry the simulator emits — `win_flag`, damage dealt/taken, armor-hit accuracy, aim latency, projectile-fly time — is recorded to a structured `episode.json` so that any later scoring policy has a stable input.
-
-The exact mapping from telemetry to a numeric score, the seed list used for grading, and how scores feed a leaderboard are **deferred to §7**. The episode shape itself (90 s, 1v1 or 2v2, the telemetry schema) is part of the homework design and stays here.
-
-### 1.4 Why this scenario satisfies all requirements
-
-* **Visualizable** — candidates spectate replays in the Godot client locally; the simulator can record short MP4 clips of any episode for review.
-* **Tech-stack coverage** — vision (HW1), TF transforms (HW2), EKF (HW3), ballistic + delay model (HW4), MPC gimbal control (HW5), full integration (HW6), self-play strategy (HW7).
-* **Cross-platform** — Godot exports Win/macOS/Linux from one `.tscn`; ROS2 Humble is not required (we drop the ROS2 dependency from the production repo for the assignment to flatten the install slope).
-* **Difficulty gradient per HW** — every HW splits into `easy / medium / hard / bonus` sections, satisfying the README's "very simple to very difficult" requirement.
-
----
-
-## 2. Engine & simulator selection
-
-### 2.1 Comparison
-
-| Platform | Visual quality | Multi-agent FPS | Cross-platform | Python API | C++ API | License | Time-to-prototype | Verdict |
-|---|---|---|---|---|---|---|---|---|
-| **Godot 4 + Godot RL Agents** | Decent low-poly + post-FX | Yes (parallel agents) | Win/macOS/Linux/Web | TCP-Sync via `gdrl` | TCP client trivial to write | MIT | **2 weeks** for an FPS prototype (FPS example exists upstream) | **Recommended primary** |
-| **Unity 2023 LTS + ML-Agents** | High (Asset Store, HDRP) | Yes | Win/macOS/Linux | gRPC (built-in) | gRPC C++ codegen | Personal/student free, Pro paid above $200k | 4–6 weeks | **Fallback if visuals fall short** |
-| **Unreal Engine 5 + Learning Agents** | Highest (Lumen/Nanite) | Yes (newer plugin) | Win/macOS/Linux | New, partial | Painful | EULA restrictive | 8+ weeks; LA inference still maturing per [Unreal LA docs](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/PluginIndex/LearningAgents) and [UnrealMLAgents port](https://github.com/AlanLaboratory/UnrealMLAgents) | Reject — too heavy for one season's recruiting cycle |
-| **VizDoom** | Retro Doom | Excellent (mature deathmatch) | Yes | Native | Native | Permissive | 3 days | Reject — fails the "scenically attractive" bar |
-| **DeepMind Lab** | Quake-III ioquake3 | Yes | **Linux only** | Lua/Bazel | C | GPL | 1 week | Reject — Linux only |
-| **Megaverse** | Stylized but spartan | Excellent (1M FPS) | Yes | Yes | Yes | MIT | 2 weeks | Reject for primary; **keep as headless training env** for RL bots if Godot training is too slow (see [Megaverse paper](https://wijmans.xyz/publication/megaverse/)) |
-| **NVIDIA Isaac Lab** | Photoreal | Robotics-first, not FPS | Yes (CUDA-only) | Yes | Yes | NVIDIA | 6 weeks | Reject — CUDA-only and built for arms/manipulation rather than FPS, per [Isaac Lab paper](https://research.nvidia.com/publication/2025-09_isaac-lab-gpu-accelerated-simulation-framework-multi-modal-robot-learning) |
-
-### 2.2 Decision
-
-Build the arena in **Godot 4** as a `.tscn` scene driving a `CharacterBody3D` chassis + skeletal yaw/pitch gimbal. Wrap it with the [`godot_rl_agents`](https://github.com/edbeeching/godot_rl_agents) `Sync` node so we get a Gym-style PettingZoo env for free, integrating directly with [Sample Factory](https://github.com/alex-petrenko/sample-factory).
-
-If the visual bar isn't met by milestone M3 (see §8), we port the same `.tscn` semantic to Unity HDRP — engine swap is a known cost since the geometry, physics, and gameplay logic are described in our own protocol-buffer schema, not in engine-specific code.
-
-### 2.3 Why we deliberately are not "AI-generating" the engine
-
-The README note about previously trying AI-generated engines is on point. Generative tools can scaffold a prototype but they cannot deliver the polish bar the team wants. We use Godot's existing demo assets ([Kenney's Sci-Fi Kit](https://kenney.nl), CC0) plus a custom shader pack for muzzle flashes / armor glow / impact decals, all of which have permissive licenses.
-
----
-
-## 3. System architecture
-
+# Current Deficiencies & Required Improvements
+- The previous generated codebase is disorganized, containing redundant
+  deployment and CI configurations, an abandoned non-Unity arena module, and
+  numerous unnecessary smoke tests. The first priority is full codebase cleanup.
+  Deployment pipelines are not required for now; only local runtime
+  functionality of the Unity game needs to be preserved.
+- Complete game art assets and visual design were never implemented in the prior iteration, though a design outline was already drafted. You may continue extending the existing plan via Unity MCP, redesign the art style from scratch, or integrate ready-made free asset packages to build the scene. Game visual and art design is a core requirement and must be polished to a high standard.
+- Existing game rule logic is fragmented and incomplete, with many specified rules unimplemented in code. You need to reorganize and formalize all game rules strictly, then implement every rule accurately in the codebase.
+- Reinforcement learning training code for the aforementioned vehicle AI policy is completely missing and needs to be fully developed from scratch.
+- The existing fill-in-the-blank assignment framework designed by Claude Code is poorly structured. You need to redesign a challenging assignment framework that follows the current project workflow. All blank tasks must start with `TODO` comments; each blank should be neither overly trivial nor excessively complex in scope. Provide standard pseudocode as reference via inline comments, following the format example below:
 ```
-┌────────────────────────────────────┐         gRPC (control)         ┌────────────────────────────────────┐
-│ Aiming Arena (Godot/Unity binary)  │ <───────────────────────────── │ Candidate's C++ stack (`hw_runner`) │
-│ - physics, rendering, scoring      │                                │ - detector (HW1)                   │
-│ - frozen RL opponents              │ ─── ZMQ PUB (image frames) ──> │ - PnP (provided)                   │
-│ - replay recorder                  │                                │ - tf graph (HW2)                   │
-│                                    │ ─── ZMQ PUB (chassis IMU) ───> │ - EKF tracker (HW3)                │
-│                                    │ <── ZMQ SUB (gimbal cmd) ───── │ - ballistic + delay (HW4)          │
-│                                    │ <── ZMQ SUB (fire/ack)  ────── │ - MPC controller (HW5)             │
-└────────────────────────────────────┘                                │ - integration / strategy (HW7)     │
-              ▲                                                       └────────────────────────────────────┘
-              │ same gRPC contract                                                          ▲
-              │ (used during training only)                                                 │ shared protobuf
-              │                                                                             │
-              │                          ┌───────────────────────────────────────────────────┘
-              │                          │
-              │                          ▼
-┌────────────────────────────────────────────────────┐
-│ Python tooling (`hw_pyrunner`)                     │
-│ - dataset generation (random arena, label dump)    │
-│ - model training & ONNX export (PyTorch + uv)      │
-│ - RL bot training (Sample Factory + PettingZoo)    │
-│ - episode driver (subprocess wraps both the         │
-│   candidate binary and the simulator)              │
-└────────────────────────────────────────────────────┘
+openSet = PriorityQueue()
+openSet.Add(start, f_score(start))
+closedSet = Set()
+cameFrom = Map()
+
+g_score = Map()
+g_score[all nodes] = Infinity
+g_score[start] = 0
+
+f_score = Map()
+f_score[all nodes] = Infinity
+f_score[start] = Heuristic(start, goal)
+
+while openSet is not empty:
+    current = openSet.PopLowest()
+
+    if current == goal:
+        return ReconstructPath(cameFrom, current)
+
+    closedSet.Add(current)
+
+    for each neighbor in GetNeighbors(current, grid):
+        if neighbor in closedSet or neighbor is obstacle:
+            continue
+
+        tentative_g = g_score[current] + Distance(current, neighbor)
+
+        if tentative_g >= g_score[neighbor]:
+            continue
+
+        cameFrom[neighbor] = current
+        g_score[neighbor] = tentative_g
+        f_score[neighbor] = g_score[neighbor] + Heuristic(neighbor, goal)
+
+        if neighbor not in openSet:
+            openSet.Add(neighbor, f_score[neighbor])
+return null
 ```
-
-### 3.1 Protocol contract
-
-A single `aiming.proto` defines:
-
-* `EnvReset(Seed) → InitialState`
-* `EnvStep(GimbalCmd) → SensorBundle`
-* `EnvPushFire(FireCmd) → AckOrPenalty`
-* `Episode → ScoreBundle` (terminal)
-
-`SensorBundle` carries (a) RGB frame ID + ZMQ topic name (frames travel over ZMQ to bypass gRPC's 4 MB ceiling), (b) chassis IMU, (c) ground-truth timestamps for telemetry only, (d) HW-specific oracle hints — for example, for HW3 the simulator can optionally publish ground-truth target velocity for sanity-check unit tests, with the simulator's `oracle_hints_enabled` flag controlling exposure. Whether and when oracle hints are masked during evaluation is a §7 concern.
-
-### 3.2 Why dual transport
-
-* **gRPC** is convenient for typed step/reset RPCs and works identically in C++/Python/Godot (via [`mr-grpc-unity`](https://github.com/OpenAvikom/mr-grpc-unity)-equivalent ports for Godot and a hand-written GDExtension we open-source).
-* **ZMQ PUB/SUB** carries 60 fps × 720p frames at 1.3 Gbps best case — out of gRPC's comfort zone but trivial for ZMQ + LZ4 (cf. the [2026 Python↔Unity protocol guide](https://copyprogramming.com/howto/protocol-to-communicate-between-python-and-unity)). On Linux/macOS we use the `ipc://` transport (Unix domain sockets) for ~25% throughput gain.
-
-### 3.3 Determinism and reproducibility
-
-* Simulator advances on a fixed 200 Hz physics tick; rendering at 60 Hz.
-* All RNG paths (map seed, opponent action sampling, projectile spread) take a single 64-bit seed exposed via `EnvReset(seed=N)`. Episodes are deterministic given the seed, opponent `.pt`, and simulator binary hash. The actual seed list used for any later grading workflow is a §7 concern.
-* `episode.json` includes the seed used, opponent `.pt` SHA, simulator binary hash, and the candidate's commit SHA so any episode is reproducible end-to-end.
-
----
-
-## 4. Sub-project breakdown
-
-Each HW is a self-contained sub-folder under `Aiming_HW/`. Every folder contains:
-
-```
-HW{N}_{slug}/
-├── README.md                # task statement, math, pseudocode, performance signals
-├── pyproject.toml           # if Python; managed by uv
-├── CMakeLists.txt           # if C++; uses uvtarget for Python deps if needed
-├── proto/                   # symlinked from /shared/proto
-├── include/, src/           # provided code with TODO-marked holes
-├── tests/                   # public unit + smoke tests (visible to candidate)
-└── docs/figures/            # generated plots, math diagrams
-```
-
-The README of each HW MUST contain (per the team's spec):
-
-0. **Language**: Chinese primary, with a short English summary block at the top (per §10 decision 4). Math, code, pseudocode, and identifiers stay language-neutral.
-1. Environment setup for Win/macOS/Linux (one fenced block per OS).
-2. Task description with motivation tied back to the Aiming Arena scenario.
-3. Mathematical principles (LaTeX-rendered) where applicable.
-4. Pseudocode preview at the level the team described — neither English narration nor copy-pasteable code, e.g.
-
-   ```python
-   for k in range(0, N):
-       x_pred = F @ x[k] + B @ u[k]                  # TODO: derive F for CV+yaw model
-       P_pred = F @ P[k] @ F.T + Q                   # TODO: tune Q from data
-       y     = z[k] - h(x_pred)
-       S     = H @ P_pred @ H.T + R
-       K     = P_pred @ H.T @ inv(S)
-       x[k+1] = x_pred + K @ y
-       P[k+1] = (I - K @ H) @ P_pred
-   ```
-
-5. Public unit-test contract — which functions the candidate must implement and what `pytest` / `ctest` will check.
-6. Performance signal (what good behaviour looks like; see §5). How that feeds a grade is a §7 concern.
-
-### Difficulty roadmap
-
-| HW | Title | Lang | Avg time (good candidate) | Pre-req | Outputs of interest | Frozen opponent tier |
-|---|---|---|---|---|---|---|
-| HW1 | Lightweight armor + icon detector | Python (train) + C++ (infer) | 12 h | none | `model.onnx` + `infer.cpp` filling 4 `TODO`s | bronze |
-| HW2 | TF graph: pixel → world | C++ | 4 h | HW1 | `Tf::lookup` returns 6-DoF transform between any pair of frames | bronze |
-| HW3 | EKF target tracker (single + multi-target) | C++ | 12 h | HW2 | `EKF::predict / update` for CV → CT model + IMM mode-switch (bonus) | silver |
-| HW4 | Ballistic predictor + firing-delay compensator | C++ | 8 h | HW3 | `Ballistic::aim()` returns gimbal pose + scheduled fire time | silver |
-| HW5 | MPC gimbal controller | C++ | 16 h | HW4 | `Mpc::step()` returns torque-rate cmd over 0.4 s horizon | silver |
-| HW6 | Full integration & latency tuning | C++ | 6 h | HW1–HW5 | `aiming_node` ties graph together inside `hw_runner` | silver |
-| HW7 *(bonus)* | Strategy / target prioritization vs `gold` bot | C++ + Python | 12 h | HW6 | `Strategy::pick_target()` + optional behaviour-tree DSL | gold |
-
-Total: ≈ 58 h for the required HW1–HW6, plus ≈ 12 h for the HW7 bonus, for a strong candidate. We communicate the assignment as a 2-week timebox so weak candidates surface honestly; the HW7 bonus is clearly labeled as optional in the candidate-facing README.
-
----
-
-## 5. HW deep-dives
-
-### HW1 — Lightweight armor & icon detector
-
-* **Why a lightweight model, not YOLO**: per the team's note, latency dominates on the embedded Orin. We replace YOLO with **anchor-free MobileNetV3-Small + a multi-task head** (bbox + 4 keypoint corners + 7-way icon classifier), modeled on [PicoDet](https://arxiv.org/abs/2111.00902) / [NanoDet](https://github.com/RangiLyu/nanodet). That makes the assignment substantively different from the production stack while still being deployable.
-* **Provided**:
-  * `train.py` skeleton with backbone instantiated, loss hooks empty.
-  * `dataset.py` that pulls 5k synthetic armor frames generated by a Godot data-dumping mode (publishes label.json next to each frame).
-  * `export_onnx.py` validated round-trip.
-  * C++ `inferer.cpp` with ONNX Runtime session set up, candidate fills `decode_outputs()` and NMS.
-* **`TODO` previews**:
-  ```python
-  # train.py
-  loss_box  = TODO_l1_or_giou(pred_box,  target_box)
-  loss_kpt  = TODO_keypoint_smooth_l1(pred_kpt, target_kpt, mask=visible)
-  loss_cls  = TODO_focal_or_ce(pred_cls,   target_cls)
-  loss      = w1*loss_box + w2*loss_kpt + w3*loss_cls
-  ```
-  ```cpp
-  // inferer.cpp
-  for k in range(0, num_proposals):
-      score = sigmoid(raw_score[k])
-      if score < score_thresh: continue
-      decoded_box = decode_box(raw_box[k], anchor[k])      // TODO: implement DFL or LTRB decode
-      decoded_kpt = decode_keypoints(raw_kpt[k], anchor)   // TODO
-      proposals.push_back({score, decoded_box, decoded_kpt, argmax(raw_cls[k])})
-  apply_class_aware_nms(&proposals, iou_thresh)            // TODO
-  ```
-* **Performance signal**: mAP@0.5 on a held-out set of 1000 simulator frames + per-frame inference latency. Stretch target: CPU-only run within 8 ms/frame.
-* **Reference**: [DeanFrancis YOLOv11n+DeepSORT](https://www.deanfrancispress.com/index.php/te/article/view/3583), [arXiv:2312.05055](https://arxiv.org/html/2312.05055v1), [illini-robomaster/irmv_detection](https://github.com/illini-robomaster/irmv_detection) for ONNX-on-edge patterns.
-
-### HW2 — TF graph
-
-* **Why split this off**: most candidates underestimate timestamp synchronisation, frame chains, and gimbal-IMU offsets. A small dedicated HW forces them to think.
-* **Provided**: a pure-header `tf::Buffer` skeleton; the candidate must fill `lookup_transform(target, source, t)` and `set_transform(parent, child, T, t)`.
-* **`TODO` previews**:
-  ```cpp
-  Quaterniond slerp_interpolate(stamp_a, stamp_b, t):
-      alpha = (t - stamp_a) / (stamp_b - stamp_a)
-      // TODO: short-arc slerp, fall back to nlerp if dot < eps
-  Affine3d compose(parent_to_world, child_to_parent):
-      // TODO: matrix multiply, double-check homogeneous order
-  ```
-* **Performance signal**: replay a 60-second logged trajectory, compare reconstructed `armor_in_world` against ground truth — RMSE bound.
-* **Reference**: ROS2 TF2 docs (we deliberately do *not* use ROS2 here so candidates write the math themselves).
-
-### HW3 — EKF tracker
-
-* **Story arc**: the candidate first builds a constant-velocity (CV) EKF on a single target (easy), then extends to a CV+CT (constant-turn) IMM filter (hard), then handles target dropout / multi-target data association via Hungarian assignment (bonus). This mirrors the maneuvering-target literature, e.g. [trackingIMM (MathWorks)](https://www.mathworks.com/help/fusion/ref/trackingimm.html), [MDPI 2024 IMM survey](https://www.mdpi.com/1999-4893/17/9/399).
-* **Math we'll print in the README** (LaTeX): predict step, update step, Joseph-form covariance update, IMM mixing equations, NIS gating threshold derivation.
-* **`TODO` previews**: same EKF skeleton shown in §4 (the "for k in range(0,N)" snippet).
-* **Performance signal**: NEES / NIS chi-squared coverage, position RMSE under (low / medium / high) target maneuver intensity, plus end-to-end aim error when fed to a fixed downstream HW4 baseline.
-* **Why we de-emphasize off-the-shelf libraries**: candidates may not import ROS robot_localization or filterpy; they must implement the matrix arithmetic in Eigen. We provide a unit-test fixture with reference outputs from a Python prototype so they can compare numerically.
-
-### HW4 — Ballistic predictor & firing-delay compensator
-
-* **Model**: 2D-projectile-with-drag ODE integrated to first impact with a moving target plane, then an iterative scheme for the firing-delay loop:
-  ```python
-  for iter in range(K):
-      t_flight   = solve_quadratic_or_rk4(distance, gravity, drag)
-      t_fire_total = t_flight + t_actuator_lag + t_pipeline_lag
-      target_at_impact = ekf.predict_forward(t_fire_total)
-      distance = ‖target_at_impact - barrel‖
-      if converged(distance): break
-  ```
-* **Provided**: a deterministic 1-D test harness (target moves in a straight line, no drag), a 2-D harness with gravity, a 3-D harness with drag, plus the production team's `BallisticSolver` interface header to plug into.
-* **`TODO` preview**:
-  ```cpp
-  for it in range(0, max_iter):
-      t_flight = TODO_solve_flight_time(barrel, target_pos, muzzle_v, drag, g)
-      t_total  = t_flight + total_actuator_delay
-      target_pos = ekf_state.predict(target_pos, target_vel, t_total)
-      err = norm(target_pos - last_pos)
-      if err < tol: break
-      last_pos = target_pos
-  ```
-* **Reference reading we cite in the HW README** (without giving away the answer): [Predictive Aim Mathematics for AI Targeting](https://www.gamedeveloper.com/programming/predictive-aim-mathematics-for-ai-targeting), [Kevin Brennan — Projectile Prediction Math](https://kmgb.github.io/blog/projectile-prediction).
-* **Performance signal**: hit-rate vs target speed, maximum effective range, and end-to-end aim accuracy in a closed-loop episode.
-
-### HW5 — MPC gimbal controller
-
-* **Why MPC, not LQR/PID**: we want to assess optimization-based control. We use **acados** (open-source, embedded-friendly C, with CasADi front-end). The candidate writes the model and cost in CasADi (Python), runs `acados`'s code-gen, then links the generated C library into a small C++ shim — exactly the workflow used in [uzh-rpg/rpg_mpc](https://github.com/uzh-rpg/rpg_mpc) for quadrotors, and described in the [acados docs](https://docs.acados.org/) and [CasADi paper](https://web.casadi.org/).
-* **Provided**: a fully working **PID controller** as the lower-bound baseline + a "naive double integrator" MPC so candidates only need to extend the model.
-* **`TODO` preview**:
-  ```python
-  # mpc/model.py — CasADi expressions
-  yaw, pitch, yaw_dot, pitch_dot = state
-  yaw_ddot   = TODO_dynamics_with_motor_torque_lag(...)
-  pitch_ddot = TODO_dynamics_with_gravity_compensation(...)
-  ```
-  ```cpp
-  // mpc/wrap.cpp — fill the cost weight matrices
-  W = block_diag( w_yaw_err, w_pitch_err,
-                  w_yaw_rate, w_pitch_rate,
-                  w_torque, w_torque_rate );
-  // TODO: tune horizon N=20, dt=20ms; stage cost vs terminal cost
-  ```
-* **Performance signal**: tracking error on a sinusoidal reference + actuator-saturation rate + closed-loop step response within spec. We deliberately publish a ground-truth recorded trajectory so candidates can iterate offline.
-* **Reference**: [Rawlings, Mayne, Diehl — *Model Predictive Control: Theory, Computation, and Design*](https://sites.engineering.ucsb.edu/~jbraw/mpc/MPC-book-2nd-edition-3rd-printing.pdf), [Mehrez MPC/MHE workshop](https://github.com/MMehrez/MPC-and-MHE-implementation-in-MATLAB-using-Casadi).
-
-### HW6 — Integration
-
-* Wire HW1..HW5 together inside the `hw_runner` C++ binary that talks gRPC to the simulator.
-* Tasks: thread management, dropping stale frames, lock-free ring buffer between detector and EKF, `std::chrono` watchdog for stale gimbal feedback.
-* **`TODO` preview**:
-  ```cpp
-  // pipeline/main.cpp
-  while (running):
-      auto frame = camera_buf.try_pop();
-      if (!frame.has_value()): continue
-      auto dets   = detector.run(frame->image);
-      tf.update(frame->stamp, gimbal_state.latest());
-      auto track  = ekf.update(dets, tf);
-      auto aim    = ballistic.aim(track, gimbal_state.latest());
-      auto cmd    = mpc.step(aim, gimbal_state.latest());
-      grpc_send(cmd);
-      if (aim.fire_now): grpc_fire();
-  ```
-* **Performance signal**: closed-loop episode performance against the `silver` bot; latency budget compliance for the full pipeline.
-
-### HW7 — Strategy & game-theoretic decision *(bonus)*
-
-* **Status**: Bonus per §10 decision 2. A candidate who submits nothing for HW7 is not disadvantaged on HW1–HW6.
-* The candidate writes a tiny behaviour-tree or rule-based DSL that decides target priority among multiple visible enemies, when to break engagement, when to push for cover. Optionally trains a small policy with PPO using the same simulator (this is the part we frame as "model-based + RL hybrid").
-* **`TODO` preview**:
-  ```cpp
-  Action choose(GameState s):
-      visible = detector.targets()
-      if any(plate.health < threshold for plate in visible):
-          return engage(weakest_plate)        // TODO: weight by distance, line-of-sight
-      if take_damage_recently(s, dt=1.0):
-          return retreat_to_cover(s)          // TODO: pick nearest cover via tf graph
-      return patrol(s)
-  ```
-* **Performance signal**: best-of-5 vs the `gold` bot. Stretch: a 2v2 mode where the candidate's bot also commands an ally NPC.
-* **Reference**: [WILD-SCAV / PMCA / Arena Breakout](https://arxiv.org/html/2410.04936v1) for FPS-RL prior art; [PettingZoo self-play tutorial](https://pettingzoo.farama.org/main/tutorials/agilerl/curriculums_and_self_play/).
-
----
-
-## 6. Toolchain plan
-
-### 6.1 Python — `uv`
-
-Each Python project ships a `pyproject.toml` and `uv.lock`. Standard ergonomics:
-
-```bash
-# one-time
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# per-project
-uv sync             # creates .venv, installs from lockfile
-uv run train.py     # runs inside the venv without activation
-uv add torch        # adds + locks
-```
-
-* `uv` is cross-platform (handles Windows path edge cases properly) per [Astral docs](https://docs.astral.sh/uv/guides/projects/) and [Real Python's uv guide](https://realpython.com/python-uv/).
-* For HWs whose C++ build must call into Python, we adopt [`basis-robotics/uvtarget`](https://github.com/basis-robotics/uvtarget) so CMake `find_package(Python)` is replaced by `uv_initialize(...)`. This avoids the classic "wrong Python on the path" pitfall on macOS.
-
-### 6.2 C++ — CMake
-
-```cmake
-cmake_minimum_required(VERSION 3.22)
-project(aiming_hw LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 20)
-
-include(FetchContent)
-FetchContent_Declare(uvtarget
-    GIT_REPOSITORY https://github.com/basis-robotics/uvtarget GIT_TAG v0.1.0)
-FetchContent_MakeAvailable(uvtarget)
-include(${uvtarget_SOURCE_DIR}/Uv.cmake)
-uv_initialize(...)
-
-find_package(Eigen3 3.4 REQUIRED)
-find_package(Protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
-find_package(onnxruntime CONFIG REQUIRED)
-
-add_subdirectory(detector)
-add_subdirectory(tracker)
-add_subdirectory(ballistic)
-add_subdirectory(mpc)
-add_subdirectory(pipeline)
-
-enable_testing()
-add_subdirectory(tests)
-```
-
-We document **`vcpkg`** (Win/macOS/Linux) as the canonical dependency manager so first-time candidates don't fight Eigen/gRPC installs. As a fallback we provide a **prebuilt Docker image** with the full toolchain; candidates can `docker compose up dev` to develop in the same image locally.
-
-### 6.3 Reference Docker image (for reproducibility)
-
-```
-aiming-hw-toolchain:2026.04
-   └── Ubuntu 22.04 + CUDA 12.2 (optional GPU)
-       + Python 3.11 (uv-managed)
-       + g++-12, clang-15, cmake 3.27
-       + Eigen 3.4, gRPC 1.60, ONNX Runtime 1.18, acados latest
-       + Godot 4 headless arena binary
-```
-
-This image is published once per HW release and pinned by digest. Its purpose is **toolchain reproducibility** — anyone (candidate or team) building the codebase inside this image gets a byte-identical environment, so behaviour doesn't depend on whichever local OS/CUDA the developer happens to have. How this image is later used inside a grading workflow is a §7 concern.
-
----
-
-## 7. Grading & leaderboard *(v1 — Proposal A)*
-
-We picked **Proposal A** of the four options reviewed after Stages 1–9 closed: auto-graded public tests on every PR + a daily leaderboard cron, with the actual hire decision made by the team reading top-N PRs and interviewing in person. Cheapest of the four (~2 days of build-out vs. 10–14 for the full team-side hidden-grader option). Implementation lives in Stage 10 of [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md); candidate-facing handbook in [`docs/grading.md`](docs/grading.md).
-
-### 7.1 What gets graded
-
-* Public unit tests only — every HW already ships them (HW1: loss-shape + ONNX-roundtrip + post-process GTest; HW2: 3 GTest binaries; HW3: 3 GTest binaries; HW4: 3 GTest binaries; HW5 PID baseline: step + sinusoid; HW6: ring buffer + watchdog; HW7: priority + retreat-trigger). Candidate's score = passing public tests on `ubuntu-latest`.
-* Skipped tests don't count for or against. HW1's ONNX-Runtime path and HW5's MPC path skip cleanly via the existing CMake skip-guards; the candidate isn't penalised for not installing those toolchains.
-* Hidden tests, live-arena episodes, and build-artefact hash binding are **explicitly out of scope** for v1. They're listed as "future cycles" in `docs/grading.md`'s last section.
-
-### 7.2 Where grading runs
-
-GitHub-hosted runners (`ubuntu-latest`). No team Orin NX, no maintainer's laptop in the critical path. CI-as-grader keeps anti-cheat to "the score derives from CI re-running every test on `pull_request.head.sha`," not from the candidate's PR description.
-
-This commits the full grading surface to whatever fits inside a 25-minute `ubuntu-latest` job: protobuf + gRPC + Eigen3 + GTest install, full project build, ctest + pytest, JUnit-XML parsing, comment posting. About 5–10 minutes wall clock per PR.
-
-### 7.3 How candidates submit
-
-* Fork → fill TODOs → push → open PR titled `姓名 - 学号` against the candidate-facing repo's `main`.
-* CI runs `validate_submission.yml` automatically on PR open + every push. The score comment updates in place (single `<!-- aiming-hw-grader -->` marker; no comment-spam).
-* No `submissions/` directory, no zip uploads, no signed score JSONs. PR diff = submission.
-
-### 7.4 Leaderboard
-
-* `regenerate_leaderboard.yml` runs daily at 19:17 Beijing-local (`17 11 * * *` UTC, per resolved decision 8). Walks every open PR, pulls each one's most-recent `submission-score-*` artefact, sorts by total passing tests with HW-breadth tiebreaker, writes `leaderboard.{md,csv,json}` to the orphan branch `leaderboard`.
-* The branch is **internal-facing only** — candidates working on `main` don't see it; only team members who fetch the `leaderboard` branch on the upstream repo see ranking. Not a public Pages deploy.
-
-### 7.5 Anti-cheat posture
-
-Honour system, validated by CI. Specifically:
-
-* Score derives from CI's own re-run; the candidate cannot edit the `submission_score.json` artefact.
-* CI runs against `pull_request.head.sha`, so historical commits on the candidate's branch don't leak in.
-* If suspected cheating ever matters (e.g. a candidate's code looks AI-generated and tests pass), the team re-runs the candidate's frozen commit on a maintainer's laptop during interview prep. No special tooling needed beyond `git checkout <sha> && cmake --build`.
-
-### 7.6 What's intentionally *not* in v1
-
-* HW7 contributes to ranking with the same weight as the others. No "bonus column."
-* Per-test weighting (e.g. counting an EKF test as worth 3 of an HW2 test) — score is a flat passing-test count.
-* Public leaderboard, web UI, real-time scoring. None of those move the needle for a 50-candidate recruitment cycle.
-
-Inheriting from §§1–6 (unchanged): episode telemetry schema, gRPC + ZMQ contract, reference Docker image, per-HW performance signals.
-
----
-
-## 8. Phased delivery roadmap
-
-| Milestone | Date (proposed) | Deliverables | Owner |
-|---|---|---|---|
-| **M0** — Engine PoC | Week 1–2 | Godot FPS scene with one chassis, gimbal, plate physics; gRPC echo server; ZMQ frame stream; one shooting demo replay | Engine lead |
-| **M1** — HW1 + HW2 ready | Week 3–4 | Detector training pipeline + ONNX export; TF buffer; bronze-tier bot trained; reference Docker image v0.1 | Vision + bot leads |
-| **M2** — HW3 + HW4 ready | Week 5–6 | EKF + ballistic; silver-tier bot; episode-driver harness with auto-replay attachment | Tracker + ballistic leads |
-| **M3** — HW5 ready, visual review | Week 7–8 | MPC; lighting / VFX pass; **decision gate** (per §10 decision 1): commit to whichever engine has the higher visual quality at this milestone. First wave can ship on Godot; if the visual bar isn't met, the second wave swaps to Unity. | Control lead + art |
-| **M4** — HW6 + HW7 ready | Week 9–11 | Full integration; gold-tier bot via 3-day self-play training; behaviour tree DSL | All |
-| **M5** — Grading workflow design | TBD | Once HW scaffolds exist, design the grading workflow, score formula, leaderboard, and anti-cheat posture (see §7). Calendar slot intentionally not committed yet. | TBD |
-| **M6** — Pilot + launch | TBD | Pilot through internal volunteers, then open the recruitment cycle. Calendar slot depends on M5 outcome. | TBD |
-
-Sub-milestones are intentionally split so HW1–HW4 can land as a **"first wave"** in week 7 if we fall behind on HW5–HW7; that still covers vision/EKF/ballistic, the bulk of the technical signal.
-
-**v2 stretch goals (deferred from v1)**
-
-| Stretch | Notes |
-|---|---|
-| **Real-camera replay bridge** | Feed pre-recorded RoboMaster RGB streams through the same gRPC/ZMQ contract the simulator uses, so the candidate's stack can be exercised on real-hardware footage in addition to simulator footage. Held back to keep v1 surface area manageable; revisit after M4. |
-
----
-
-## 9. Risks & mitigations
-
-| Risk | Probability | Impact | Mitigation |
-|---|---|---|---|
-| Godot visuals fail "scenically attractive" bar at M3 | Medium | High | Prebuild Unity HDRP port in parallel from week 5; keep gameplay logic in our protocol so the swap is data-only. |
-| Gold-tier RL bot doesn't converge to interesting behaviour | Medium | Medium | Cap training at 3 days; if it stalls, hand-script the gold bot from a behaviour tree augmented by silver's PPO policy as a sub-skill. |
-| Cross-platform pain on Windows (especially gRPC + acados) | High | Medium | Provide a WSL2 escape hatch in the README; the reference Docker image always provides a known-good Linux toolchain. |
-| Candidate exploits the simulator (e.g., walks through walls) | Low | Low | Server-authoritative physics; client commands are clamped; replays let us audit. |
-| Detection task collapses to memorising synthetic data | Medium | Medium | Domain-randomize lighting, colour, camera intrinsics, projectile occlusion in HW1 dataset; include 100 real-world RoboMaster frames in the test split. |
-| `uv` / `uvtarget` regressions on Windows | Low | Low | Pin `uv` and `uvtarget` versions in `cmake/UvFetch.cmake`. |
-| Detector / EKF / MPC are too slow on a candidate's CPU | Medium | Medium | The detector and EKF/MPC are designed to run on CPU within the latency budget; reference image carries CUDA-optional ONNX-RT and acados. Profile + tune during M2/M3. |
-
----
-
-## 10. Resolved decisions
-
-Decisions whose impact lives entirely inside the **homework design** (this schema). Decisions whose impact is grading-specific have been removed from this table and will be re-introduced when §7 is designed.
-
-| # | Question | Decision | Reflected in |
-|---|---|---|---|
-| 1 | **Engine choice gate** — Godot primary with Unity fallback at M3, or commit to Unity from the start? | Commit at M3 to **whichever engine has the higher visual quality**. First wave ships on Godot; if the visual bar isn't met, the second wave swaps to Unity. The protocol-buffer schema keeps gameplay logic engine-independent so the swap is a data-only port. | §0 TL;DR · §2.2 · §8 (M3) · §9 (engine risk) |
-| 2 | **Difficulty cap** — is HW7 required, or stretch only? | **HW7 is a bonus.** A candidate who skips HW7 entirely is not disadvantaged on HW1–HW6. How (or whether) HW7 contributes to a final ranking is a §7-level question. | §0 TL;DR · §4 (table) · §5 (HW7 deep-dive) |
-| 3 | **Real-camera replay bridge** — expose a "real camera replay" mode for candidates with hardware access? | **Not in v1.** Tracked as a v2 stretch goal once the core pipeline is stable; same gRPC/ZMQ contract will be reusable. | §8 (v2 stretch goals) |
-| 4 | **Language for HW READMEs** — English-primary or Chinese-primary? | **Chinese primary** with a short English summary block at the top of each README. Math, code, and pseudocode stay language-neutral. The schema and team-facing docs (this file) remain in English. | Front-matter · §4 (item 0 of HW README spec) |
-| 5 | **Generative-AI policy** — explicit ban + detection, or none? | **No explicit policy and no automated detection.** The code-completion shape of the assignment — small, well-bounded `TODO` holes inside a working scaffold — is itself the deterrent: a candidate who fills holes by hand finishes nearly as fast as one prompting an LLM. | §7 (deferred) |
-| 6 | **Candidate-facing repo path** — where does the assignment live? | **[`www-David-dotcom/TsingYun_Tutorial_Vision-Aiming`](https://github.com/www-David-dotcom/TsingYun_Tutorial_Vision-Aiming).** Candidates fork it; submission flow (PR vs commit-to-fork vs other) is part of §7. | Front-matter |
-| 7 | **OSS asset hosting** — where do Godot binaries, datasets, opponent weights, and the reference Docker image live? | **Aliyun OSS in `cn-beijing`**, three buckets: `tsingyun-aiming-hw-public` (anonymous-read for binaries and datasets), `tsingyun-aiming-hw-models` (private, SSE-OSS encryption, holds opponent weights and reference detector ONNX), `tsingyun-aiming-hw-cache` (private, holds the reference Docker image and build caches). Access pattern for the private buckets — shared AccessKey vs RAM role vs presigned URL — is a §7 concern, decided once we know whether grading runs candidate-side or team-side. | IMPLEMENTATION_PLAN.md §Resolved decisions |
-
-Future decisions or revisions should be appended below this table with a date and a short note on what changed. Grading-specific decisions (where grading runs, leaderboard topology, anti-cheat posture, score formula) will be added when §7 is filled in.
-
----
-
-## 11. References
-
-### FPS / multi-agent RL platforms
-* Edward Beeching et al., **Godot RL Agents** — [arXiv:2112.03636](https://arxiv.org/abs/2112.03636) · [GitHub](https://github.com/edbeeching/godot_rl_agents) · [Hugging Face DeepRL course unit](https://huggingface.co/learn/deep-rl-course/en/unitbonus3/godotrl)
-* Unity Technologies, **ML-Agents** — [GitHub](https://github.com/Unity-Technologies/ml-agents) · [ML-Agents gRPC fork](https://github.com/Unity-Technologies/ml-agents-grpc) · Custom gRPC sample [mr-grpc-unity](https://github.com/OpenAvikom/mr-grpc-unity)
-* Epic Games, **Learning Agents** plugin — [Unreal docs](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/PluginIndex/LearningAgents) · port: [UnrealMLAgents](https://github.com/AlanLaboratory/UnrealMLAgents)
-* Microsoft, **AirSim** — [home](https://microsoft.github.io/AirSim/) · [RL examples](https://github.com/Microsoft/AirSim/tree/main/PythonClient/reinforcement_learning) (note: archived in favour of Project AirSim)
-* **MindMaker**, [GitHub](https://github.com/krumiaa/MindMaker)
-* Petrenko et al., **Sample Factory: Egocentric 3D Control from Pixels at 100000 FPS** — [arXiv:2006.11751](https://arxiv.org/abs/2006.11751) · [docs](https://www.samplefactory.dev/) · [GitHub](https://github.com/alex-petrenko/sample-factory)
-* Petrenko et al., **Megaverse: Simulating Embodied Agents at One Million Experiences/sec** — [paper](https://wijmans.xyz/publication/megaverse/) · [arXiv:2107.08170](https://arxiv.org/pdf/2107.08170)
-* NVIDIA, **Isaac Lab** — [paper](https://research.nvidia.com/publication/2025-09_isaac-lab-gpu-accelerated-simulation-framework-multi-modal-robot-learning) · [GitHub](https://github.com/isaac-sim/IsaacLab)
-* **VizDoom** retrospective and [WILD-SCAV / Arena Breakout PMCA](https://arxiv.org/html/2410.04936v1)
-* Farama Foundation, **PettingZoo** — [docs](https://pettingzoo.farama.org/) · [paper](https://arxiv.org/abs/2009.14471)
-
-### RoboMaster aiming literature & opensource
-* arXiv:2312.05055, [*Design and Implementation of Automatic Assisted Aiming System for RoboMaster EP*](https://arxiv.org/html/2312.05055v1)
-* Dean Francis Press 2025, [*RoboMaster Robot Automatic Targeting System Based on YOLOv11n and DeepSORT*](https://www.deanfrancispress.com/index.php/te/article/view/3583)
-* [SEU-SuperNova-CVRA Robomaster2018](https://github.com/SEU-SuperNova-CVRA/Robomaster2018-SEU-OpenSource)
-* [illini-robomaster/irmv_detection](https://github.com/illini-robomaster/irmv_detection)
-* [RoboMaster/RoboRTS](https://github.com/RoboMaster/RoboRTS), [RoboMaster OSS organisation](https://github.com/robomaster-oss)
-* [zhuodannychen/Robomaster-ComputerVision](https://github.com/zhuodannychen/Robomaster-ComputerVision)
-* [GOFIRST-Robotics/RoboMaster-2024](https://github.com/GOFIRST-Robotics/RoboMaster-2024)
-
-### Estimation, control, math
-* Bar-Shalom, Li, Kirubarajan — *Estimation with Applications to Tracking and Navigation* (textbook reference for EKF/IMM)
-* MathWorks Sensor Fusion Toolbox — [Tracking Maneuvering Targets](https://www.mathworks.com/help/fusion/ug/tracking-maneuvering-targets.html), [trackingIMM](https://www.mathworks.com/help/fusion/ref/trackingimm.html)
-* MDPI 2024, [IMM Filtering Algorithms for a Highly Maneuvering Fighter Aircraft](https://www.mdpi.com/1999-4893/17/9/399)
-* Rawlings, Mayne, Diehl — [*Model Predictive Control: Theory, Computation, and Design*](https://sites.engineering.ucsb.edu/~jbraw/mpc/MPC-book-2nd-edition-3rd-printing.pdf)
-* CasADi — [home](https://web.casadi.org/) · [paper](https://optimization-online.org/wp-content/uploads/2018/01/6420.pdf)
-* acados — [docs](https://docs.acados.org/)
-* uzh-rpg quadrotor MPC — [GitHub](https://github.com/uzh-rpg/rpg_mpc)
-* Mehrez MPC/MHE workshop — [GitHub](https://github.com/MMehrez/MPC-and-MHE-implementation-in-MATLAB-using-Casadi)
-* PlayTechs blog, [Aiming a projectile at a moving target](http://playtechs.blogspot.com/2007/04/aiming-at-moving-target.html)
-* Game Developer, [Predictive Aim Mathematics for AI Targeting](https://www.gamedeveloper.com/programming/predictive-aim-mathematics-for-ai-targeting)
-* Kevin Brennan, [Projectile Prediction Math](https://kmgb.github.io/blog/projectile-prediction)
-
-### Tooling and build
-* Astral `uv` — [docs](https://docs.astral.sh/uv/) · [Real Python guide](https://realpython.com/python-uv/) · [Complete guide](https://pydevtools.com/handbook/explanation/uv-complete-guide/)
-* basis-robotics, [`uvtarget`](https://github.com/basis-robotics/uvtarget) — uv ↔ CMake glue
-* ZeroMQ + NetMQ, gRPC: [2026 Python↔Unity Protocol Guide](https://copyprogramming.com/howto/protocol-to-communicate-between-python-and-unity)
-
-(Grading-platform references — GitHub Classroom autograding, Actions Runner Controller, EvalAI / Codabench — will be re-added when §7 is designed.)
-
----
-
-## Appendix A — Suggested directory layout
-
-```
-Aiming_HW/
-├── schema.md                   # this document
-├── IMPLEMENTATION_PLAN.md      # per-stage delivery plan
-├── README.md                   # candidate-facing overview
-├── shared/
-│   ├── proto/                  # aiming.proto and codegen rules
-│   ├── docker/                 # reference toolchain Dockerfile
-│   ├── godot_arena/            # the simulator project
-│   │   ├── project.godot
-│   │   ├── scenes/...
-│   │   ├── scripts/...
-│   │   └── export_presets.cfg
-│   ├── opponents/              # populated by fetch_assets.py from the OSS models bucket
-│   └── cmake/                  # FetchContent helpers, UvFetch.cmake
-├── HW1_armor_detector/
-├── HW2_tf_graph/
-├── HW3_ekf_tracker/
-├── HW4_ballistic/
-├── HW5_mpc_gimbal/
-├── HW6_integration/
-└── HW7_strategy/
-
-# A `grader/` directory will be added when §7 is designed.
-```
-
-## Appendix B — Open-source reuse summary
-
-| Component we reuse | License | Why we can ship it |
-|---|---|---|
-| Godot 4 engine | MIT | freely redistributable |
-| Godot RL Agents | MIT | freely redistributable |
-| Sample Factory 2 | MIT | freely redistributable |
-| PettingZoo / Gymnasium | MIT | freely redistributable |
-| ONNX Runtime | MIT | freely redistributable |
-| Eigen 3 | MPL2 | header-only, weak copyleft fine for distribution |
-| gRPC | Apache-2.0 | freely redistributable |
-| acados | LGPL-3.0 | dynamic-link only — we link as a shared library at runtime |
-| CasADi | LGPL-3.0 | same as acados |
-| Kenney sci-fi assets | CC0 | freely redistributable |
-
----
-
-*End of schema v0.4 — homework design only; grading workflow and leaderboard policy live in §7 as a deferred stub until the HW scaffolds (Stages 1–9 in IMPLEMENTATION_PLAN.md) are built. Comments, corrections, and disagreements welcome.*
+- Partial assignment completions (e.g., finishing only Task 1–2) cannot run directly in the main game simulator. You need to design independent lightweight mini test cases to let students verify the correctness of their implemented logic separately.
+- Design a dedicated training ground scene with a static target vehicle placed opposite the player. Implement a simple in-game UI that allows students to adjust the target vehicle’s translation speed and rotation speed in real time, to test whether their auto-aim system can correctly lock onto and hit the target vehicle’s armor plates, and visualize the real-time performance of their auto-aim logic.

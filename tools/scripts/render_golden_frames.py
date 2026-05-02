@@ -1,12 +1,12 @@
-"""Render a deterministic 1280x720 RGB frame from a running arena.
+"""Render deterministic 1280x720 RGB frames from a running Unity arena.
 
 Usage:
   uv run python tools/scripts/render_golden_frames.py \
-      --engine {godot|unity} --output-dir tests/golden_frames/
+      --output-dir tests/golden_frames_unity_baseline/
 
 Iterates over 5 seeds × 5 gimbal poses, sends env_reset(seed),
 env_step(target_yaw, target_pitch), reads one frame from the frame port,
-and saves it as <engine>_seed_<seed>_pose_<idx>.png.
+and saves it as seed_<seed>_pose_<idx>.png.
 """
 
 from __future__ import annotations
@@ -62,7 +62,6 @@ def read_one_frame(frame_sock: socket.socket, width: int, height: int) -> np.nda
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--engine", required=True, choices=["godot", "unity"])
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--control-port", type=int, default=7654)
@@ -90,7 +89,7 @@ def main() -> int:
                     read_one_frame(fsock, 1280, 720)
                 frame = read_one_frame(fsock, 1280, 720)
                 send_request(sock, "env_finish", {})
-                out = args.output_dir / f"{args.engine}_seed_{seed:04d}_pose_{pose_idx}.png"
+                out = args.output_dir / f"seed_{seed:04d}_pose_{pose_idx}.png"
                 Image.fromarray(frame).save(out)
                 print(f"[render] wrote {out}")
 

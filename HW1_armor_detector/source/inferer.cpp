@@ -10,7 +10,7 @@
 // ONNX-Runtime session set-up + IO binding for the HW1 detector.
 //
 // The session lifecycle and tensor plumbing is filled — your job is
-// the decode + NMS in source/post_process.cpp. The single TODO in
+// the decode + NMS in source/post_process.cpp. The single HW1 blank in
 // this file is a one-line dispatch into post_process functions.
 
 namespace aiming_hw {

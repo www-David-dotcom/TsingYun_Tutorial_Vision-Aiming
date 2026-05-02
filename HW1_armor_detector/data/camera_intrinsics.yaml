@@ -1,13 +1,7 @@
-# Pinhole intrinsics for the gimbal camera in shared/godot_arena/.
+# Pinhole intrinsics reference for the Unity gimbal camera.
 #
-# These match Godot's Camera3D in scenes/gimbal.tscn (FOV=60°,
-# resolution from project.godot). The dataset dumper's `--source godot`
-# backend uses these to re-project oracle target world coords into
-# screen-space bounding boxes.
-#
-# If you change the FOV in gimbal.tscn or the viewport size in
-# project.godot, regenerate this file (the math is in
-# data/dataset_dumper.py:rebuild_intrinsics).
+# The current synthetic dataset dumper does not consume this file; it is kept
+# as legacy calibration reference for future Unity label-dump tooling.
 
 width: 1280
 height: 720
@@ -19,8 +13,7 @@ fx: 623.538290
 cx: 640.0
 cy: 360.0
 
-# Plate geometry (matches scenes/armor_plate.tscn — used to size the
-# bbox after the dumper computes the plate centre in pixels).
+# Plate geometry reference used to size future projected labels.
 plate_world:
   width_m: 0.14
   height_m: 0.13

@@ -1,5 +1,20 @@
 # HW6 — 集成 / Integration Runner
 
+> **Status:** Active as part of the Unity-first assignment path; older
+> standalone workflows in this folder are legacy reference.
+>
+> **Unity-first role:** Connect frame ingestion, perception, tracking, aiming,
+> and Unity control.
+>
+> **Legacy-only:** Threading and stale-frame tests are partial gates; full
+> Unity smoke requires the running arena.
+>
+> **Mini-test:** `ctest --preset linux-debug -R hw6`
+>
+> **Mini-test files:**
+> - `HW6_integration/tests/public/test_ring_buffer.cpp`
+> - `HW6_integration/tests/public/test_watchdog.cpp`
+
 > 第六道作业：把 HW1（检测）→ HW3（跟踪）→ HW4（弹道）→ HW5（控制）
 > 串成一个实时跑的程序。HW6 自己只写 ring buffer + watchdog +
 > 线程编排——具体的算法都已经在前几道作业里写过了。
@@ -12,6 +27,45 @@
 > filled — HW6 is the assembly job.
 
 ---
+
+## Student Quickstart
+
+### Prerequisites
+
+- Complete the root [First-time setup](../README.md#first-time-setup).
+- Complete or intentionally stub A1, A3, A4, and A5 before expecting a useful
+  live runner.
+- Use the Docker toolchain for C++ mini-tests.
+
+### What to implement
+
+Fill the `TODO(HW6):` sites in:
+
+- `HW6_integration/source/runner.cpp`
+- `HW6_integration/source/main.cpp`
+
+Start with `Runner::next_frame`; it has a direct unit test. The thread layout
+in `run_episode` is the system integration step.
+
+### Mini-test command
+
+```bash
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --preset linux-debug -R hw6
+```
+
+### Expected first run
+
+The ring-buffer tests should pass on a fresh checkout. Watchdog tests that
+touch unfilled polling behavior can `GTEST_SKIP` until the relevant
+`TODO(HW6):` body is complete.
+
+### Before moving on
+
+Run `ctest --preset linux-debug -R hw6`. For live smoke, open the Unity scene,
+enter Play mode, and run `UV_CACHE_DIR=.uv-cache uv run python
+tools/scripts/smoke_arena.py --seed 42 --ticks 10`.
 
 ## 设计 / Design
 
@@ -35,7 +89,7 @@
                        gRPC client thread
                               │
                               ▼
-                       Godot arena (HW2-stage server)
+                       Unity arena control server
 ```
 
 * `Frame{frame_id, stamp_ns, w, h, rgb}` is what the ZMQ thread
@@ -122,5 +176,4 @@ tests; HW6's CI runs under TSan on every commit instead.
 * HW7 strategy / behaviour-tree wiring — that's Stage 9.
 * gRPC client implementation — the candidate uses the generated
   stubs from `shared/proto`; HW6 doesn't re-implement them.
-* Hidden grading episodes — deferred per `IMPLEMENTATION_PLAN.md`
-  Stage 10.
+* Hidden grading episodes — grading must be redesigned from `schema.md`.

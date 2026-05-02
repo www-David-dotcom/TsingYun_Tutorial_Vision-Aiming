@@ -14,8 +14,8 @@ FetchContent_MakeAvailable(googletest)
 add_executable(proto_roundtrip_test proto_roundtrip_test.cpp)
 target_link_libraries(proto_roundtrip_test
     PRIVATE
-        aiming_proto
-        GTest::gtest_main)
+        GTest::gtest_main
+        aiming_proto)
 
 include(GoogleTest)
 gtest_discover_tests(proto_roundtrip_test)

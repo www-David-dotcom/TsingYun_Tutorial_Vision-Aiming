@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.22)
 
 # HW1 inferer + post-processing. Skipped at configure time if ONNX
 # Runtime isn't available on the host; the rest of the project keeps
-# building so contributors who only touch the Python or Godot sides
-# don't need a CUDA-grade environment.
+# building so contributors who only touch the Python or Unity sides don't
+# need a CUDA-grade environment.
 
 find_package(onnxruntime QUIET CONFIG)
 if(NOT onnxruntime_FOUND)

@@ -7,7 +7,7 @@
 // The candidate fills `MpcController::step` once they've run
 // `python src/generate_acados.py` and have the C library under
 // generated_solver/. The header itself is filled — only the
-// implementation in source/controller.cpp has the TODO.
+// implementation in source/controller.cpp has TODO(HW5):.
 //
 // If `generated_solver/` doesn't exist at configure time, the HW5
 // CMakeLists.txt drops the MPC target entirely and only the PID

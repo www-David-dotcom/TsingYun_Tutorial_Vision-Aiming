@@ -8,7 +8,7 @@ test_cv_predict.cpp's golden values).
 Read order:
 1. State definition + measurement model — top of this file.
 2. Motion models (cv_step / ct_step).
-3. EKF predict + update — the candidate's TODO in C++ mirrors these.
+3. EKF predict + update - the C++ candidate blank mirrors these.
 4. IMM mixing + per-mode update + state combination.
 5. Hungarian assignment (here we delegate to scipy; the candidate
    writes it from scratch in C++ to keep the dep footprint small).

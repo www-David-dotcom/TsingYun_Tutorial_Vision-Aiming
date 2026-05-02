@@ -1,17 +1,14 @@
 """Extract N samples per digit from MNIST as PNG stickers.
 
-Both engines render an MNIST digit on each armor plate as the robot's
-"number tag". This script downloads the raw MNIST IDX files (no
-torchvision / torch dependency) and dumps the first N samples of each
-digit (0-9) into a flat directory:
+Unity renders an MNIST digit on each armor plate as the robot's number tag.
+This script downloads the raw MNIST IDX files (no torchvision / torch
+dependency) and dumps the first N samples of each digit (0-9) into a flat
+directory:
 
   shared/sticker_assets/mnist/{digit}/{idx:03d}.png
 
-Both engines load from there at episode reset:
-  - Unity: copy or symlink shared/sticker_assets/mnist/ into
-    shared/unity_arena/Assets/Resources/MNIST/ (Resources.Load reads here).
-  - Godot: copy or symlink into shared/godot_arena/assets/mnist/ (load()
-    via res:// reads here).
+Unity loads from:
+  shared/unity_arena/Assets/Resources/MNIST/
 
 Required deps: pillow only. Add via `uv add --dev pillow` if missing.
 
@@ -107,9 +104,7 @@ def main() -> int:
         print(f"[mnist] digit {digit}: {len(raws)} → {outdir}")
 
     print(f"[mnist] wrote {total} PNGs under {args.output_dir}")
-    print("[mnist] copy or symlink this into:")
-    print("  - shared/unity_arena/Assets/Resources/MNIST/")
-    print("  - shared/godot_arena/assets/mnist/")
+    print("[mnist] copy or symlink this into shared/unity_arena/Assets/Resources/MNIST/")
     return 0
 
 

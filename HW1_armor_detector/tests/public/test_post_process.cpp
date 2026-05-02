@@ -50,7 +50,7 @@ TEST(HW1PostProcess, NMSDeduplicatesSameClassOverlap) {
     auto kept = non_max_suppression(std::move(candidates), 0.40f);
 
     if (kept.empty()) {
-        GTEST_SKIP() << "non_max_suppression unimplemented — fill the TODO";
+        GTEST_SKIP() << "non_max_suppression unimplemented - fill TODO(HW1): in source/post_process.cpp";
     }
     ASSERT_EQ(kept.size(), 2u);
     // Both icons should survive; the duplicate Hero should not.
@@ -75,7 +75,7 @@ TEST(HW1PostProcess, NMSKeepsCrossClassStacks) {
     auto kept = non_max_suppression(std::move(candidates), 0.40f);
 
     if (kept.empty()) {
-        GTEST_SKIP() << "non_max_suppression unimplemented — fill the TODO";
+        GTEST_SKIP() << "non_max_suppression unimplemented - fill TODO(HW1): in source/post_process.cpp";
     }
     EXPECT_EQ(kept.size(), 4u);
 }
