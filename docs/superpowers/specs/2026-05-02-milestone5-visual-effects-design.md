@@ -11,6 +11,20 @@ The approved direction is **Competitive Neon Industrial**: dark matte metal and
 carbon surfaces, restrained cyan/magenta accent strips, readable holographic
 markers, thin atmosphere, and crisp red/blue team signals.
 
+## Creative Ambition
+
+Readability is a guardrail, not the visual ceiling. The scene should use the
+strongest polished look that still preserves the essential assignment signals.
+When choosing between sparse and rich visual treatment, prefer rich treatment:
+more layered materials, more purposeful accent lighting, more holographic
+detail, more projectile and impact energy, and more mechanical surface depth.
+
+The target is not a minimal detector-friendly scene. The target is an
+imaginative, high-impact RoboMaster sci-fi arena where the important gameplay
+cues remain recoverable. QA should catch destructive failures, such as washed
+out stickers or lost red/blue identity, but it should not force the scene back
+into a flat prototype look.
+
 ## Hard Constraints
 
 - Armor plate base colors remain exact pure red `#FF0000` and pure blue
@@ -24,6 +38,9 @@ markers, thin atmosphere, and crisp red/blue team signals.
 - Projectile trails, muzzle flash, hit flash, fog, lights, and decorative
   particles cannot affect projectile physics, hit logic, match rules,
   telemetry, or training behavior.
+- Visual density is encouraged. Dense lighting, particles, glow layers, surface
+  details, and holographic accents are acceptable as long as the player can
+  still identify teams, targets, armor plates, and rule zones in normal views.
 - Visual-only additions must not introduce colliders that change movement,
   projectile impacts, armor hits, or camera placement.
 - Completion requires QA evidence, not only scene edits.
@@ -74,19 +91,23 @@ so subsequent runs update existing objects instead of duplicating them.
 The main arena receives the full competitive neon treatment:
 
 - dark industrial floor and wall materials,
-- subtle cyan/magenta edge strips on important maze boundaries,
+- layered metal, carbon, glass, and panel materials,
+- cyan/magenta edge strips on important maze boundaries,
+- localized glow clusters, warning glyphs, and technical decals,
 - controlled key, fill, and rim lighting,
-- thin atmosphere and sparse drifting particles,
+- visible atmosphere and drifting particles tuned for mood rather than minimalism,
 - brighter holographic junction posts,
+- projectile, muzzle, impact, and armor-hit energy flashes,
 - readable healing and boost zone markers,
-- no visual noise that hides armor plates or target silhouettes.
+- enough restraint to avoid hiding armor plates or target silhouettes.
 
 ### `TrainingGround`
 
 The training scene receives a cleaner calibration-lab version of the same style:
 
 - dark test-lab floor and measured aiming lanes,
-- controlled cyan accents,
+- controlled but visually rich cyan accents,
+- holographic calibration grids and target-range markings,
 - strong target silhouette,
 - readable training UI,
 - same robot, armor, projectile, hologram, and rule-marker polish as the arena.
@@ -155,7 +176,7 @@ Required verification:
 - Screenshot QA for both scenes from stable camera viewpoints:
   - frames are nonblank,
   - red and blue armor pixels remain detectable,
-  - armor glow does not wash out stickers,
+  - armor glow does not fully wash out stickers,
   - neon accent coverage is visible but bounded,
   - major robot parts no longer appear detached from the inspected views.
 - Console and compile checks after script and editor-tool changes.
@@ -167,7 +188,6 @@ known limits.
 
 ## Non-Goals
 
-- Do not import large external asset packs in this milestone.
 - Do not replace the candidate-facing detector/sticker semantics.
 - Do not change match rules, projectile physics, damage, heat, hit rate,
   training telemetry, or the TCP frame/control contracts.
