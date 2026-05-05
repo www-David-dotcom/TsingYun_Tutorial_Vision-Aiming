@@ -321,9 +321,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &223447535
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -559,9 +558,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &269928324
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2018,9 +2016,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &653768739
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2166,9 +2163,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &664735948
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3992,9 +3988,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &1069353968
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9265,9 +9260,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &1112598272
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9718,9 +9712,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &1166785824
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10825,9 +10818,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55d7ff81ed6694d0c9aca4bf75f9781c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ArmorPlateVisual
-  PlateRenderer: {fileID: 0}
-  InternalLight: {fileID: 0}
-  Profile: {fileID: 0}
+  plateRenderer: {fileID: 0}
+  edgeRenderer: {fileID: 0}
 --- !u!114 &1763268922
 MonoBehaviour:
   m_ObjectHideFlags: 0
