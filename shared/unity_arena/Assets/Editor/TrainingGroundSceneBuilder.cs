@@ -11,7 +11,7 @@ namespace TsingYun.UnityArena.EditorUtilities
     public static class TrainingGroundSceneBuilder
     {
         private const string ScenePath = "Assets/Scenes/TrainingGround.unity";
-        private const string ChassisPrefabPath = "Assets/Prefabs/Chassis.prefab";
+        private const string VehicleFbxPath = "Assets/Models/robot-refined-parts/vehicle_parts_game.fbx";
         private const string ProjectilePrefabPath = "Assets/Prefabs/Projectile.prefab";
         private const float ChassisSpawnHeightMeters = 0.05f;
 
@@ -56,27 +56,34 @@ namespace TsingYun.UnityArena.EditorUtilities
 
         private static Chassis CreateChassis(string name, string team, Vector3 position)
         {
-            GameObject instance = InstantiatePrefab(ChassisPrefabPath, name, position);
-            var chassis = instance.GetComponent<Chassis>();
-            if (chassis == null)
-            {
-                chassis = instance.AddComponent<Chassis>();
-            }
-
-            chassis.Team = team;
-            chassis.MaxHp = GameConstants.VehicleHpOneVsOne;
-            return chassis;
-        }
-
-        private static GameObject InstantiatePrefab(string path, string name, Vector3 position)
-        {
-            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(VehicleFbxPath);
             GameObject instance = prefab != null
                 ? (GameObject)PrefabUtility.InstantiatePrefab(prefab)
-                : GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                : new GameObject(name);
             instance.name = name;
             instance.transform.position = position;
-            return instance;
+            instance.transform.rotation = Quaternion.identity;
+
+            // Add CharacterController if missing
+            if (instance.GetComponent<CharacterController>() == null)
+                instance.AddComponent<CharacterController>();
+
+            var chassis = instance.GetComponent<Chassis>();
+            if (chassis == null) chassis = instance.AddComponent<Chassis>();
+            chassis.Team = team;
+            chassis.MaxHp = GameConstants.VehicleHpOneVsOne;
+
+            // Add gimbal script
+            var gimbalT = instance.transform.Find("Gimbal");
+            if (gimbalT != null && gimbalT.GetComponent<Gimbal>() == null)
+            {
+                var gs = gimbalT.gameObject.AddComponent<Gimbal>();
+                gs.YawPivot = gimbalT.Find("YawPivot");
+                gs.PitchPivot = gimbalT.Find("YawPivot/PitchPivot");
+                gs.Muzzle = gimbalT.Find("YawPivot/PitchPivot/Muzzle_Barrel");
+            }
+
+            return chassis;
         }
 
         private static GameObject CreateMarker(string name, Vector3 position, float yawDegrees)

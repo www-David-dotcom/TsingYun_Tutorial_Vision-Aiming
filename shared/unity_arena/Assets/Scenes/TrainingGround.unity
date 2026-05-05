@@ -808,7 +808,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -1982,6 +1982,10 @@ PrefabInstance:
       propertyPath: m_Mesh
       value: 
       objectReference: {fileID: 865084863}
+    - target: {fileID: 4819856162812862479, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
+      propertyPath: m_Depth
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 5496614719444399976, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
       propertyPath: m_LocalPosition.x
       value: -3
@@ -2022,6 +2026,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6034676214817250966, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
+      propertyPath: m_TagString
+      value: MainCamera
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2038,6 +2046,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea744a81302724b369f3c854588839d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.Chassis
+--- !u!20 &450619852 stripped
+Camera:
+  m_CorrespondingSourceObject: {fileID: 4819856162812862479, guid: 325a87de7a1044d58bada2061958ec10, type: 3}
+  m_PrefabInstance: {fileID: 450619850}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &451539823
 GameObject:
   m_ObjectHideFlags: 0
@@ -4476,7 +4489,7 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: 0
+  m_TextStyleHashCode: -1183493901
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
@@ -5970,7 +5983,7 @@ MonoBehaviour:
   FramePort: 7655
   BlueChassis: {fileID: 450619851}
   RedChassis: {fileID: 568078094}
-  GimbalCamera: {fileID: 969515238}
+  GimbalCamera: {fileID: 450619852}
   ProjectileRoot: {fileID: 2067084230}
   SpawnPointBlue: {fileID: 1193966392}
   SpawnPointRed: {fileID: 836050283}
