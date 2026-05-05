@@ -50,6 +50,10 @@ MonoBehaviour:
   JunctionId: JCT-00
   GridCoords: {x: 0, y: 0}
   LabelText: {fileID: 983754799526979979}
+  Profile: {fileID: 11400000, guid: 640b61d1509de479086359a3691ddfdb, type: 2}
+  EmissiveRenderers:
+  - {fileID: 1432293192882605401}
+  - {fileID: 8958996029377453095}
 --- !u!1 &2856158694621732273
 GameObject:
   m_ObjectHideFlags: 0
@@ -2599,7 +2603,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c22777d6e868e4f2fb421913386b154e, type: 2}
+  - {fileID: 2100000, guid: e0e0ade50bb7c441482545c96788fcd7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3602,7 +3606,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: c22777d6e868e4f2fb421913386b154e, type: 2}
+  - {fileID: 2100000, guid: e0e0ade50bb7c441482545c96788fcd7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

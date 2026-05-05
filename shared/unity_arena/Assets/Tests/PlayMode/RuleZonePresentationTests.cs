@@ -37,11 +37,38 @@ namespace TsingYun.UnityArena.Tests.PlayMode
             Assert.AreEqual(2f, boostOne.Radius, 1e-6f);
         }
 
+        [UnityTest]
+        public IEnumerator RuleZoneMarkerRenderer_UsesProfileBoostColor()
+        {
+            _root = new GameObject("RuleZoneProfileHost");
+            var renderer = _root.AddComponent<RuleZoneMarkerRenderer>();
+            var profile = VisualPolishProfile.CreateRuntimeDefault();
+            profile.BoostColor = new Color(0.1f, 1f, 0.7f, 0.42f);
+            renderer.Profile = profile;
+
+            renderer.RenderBoostPoints(
+                new[] { Vector3.zero },
+                new[] { BoostPointHolder.Unheld },
+                boostRadius: 1.5f);
+            yield return null;
+
+            var markerRenderer = _root.transform.Find("RuleMarkers/BoostPoint_1").GetComponent<MeshRenderer>();
+            AssertColorApproximately(profile.BoostColor, markerRenderer.sharedMaterial.GetColor("_BaseColor"));
+        }
+
         [UnityTearDown]
         public IEnumerator TearDown()
         {
             if (_root != null) Object.Destroy(_root);
             yield return null;
+        }
+
+        private static void AssertColorApproximately(Color expected, Color actual)
+        {
+            Assert.AreEqual(expected.r, actual.r, 1e-5f);
+            Assert.AreEqual(expected.g, actual.g, 1e-5f);
+            Assert.AreEqual(expected.b, actual.b, 1e-5f);
+            Assert.AreEqual(expected.a, actual.a, 1e-5f);
         }
     }
 }

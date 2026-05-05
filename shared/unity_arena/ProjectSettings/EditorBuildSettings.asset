@@ -8,5 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MapA_MazeHybrid.unity
     guid: 60e3a80a7cb7844e885b49620eacc32d
+  - enabled: 1
+    path: Assets/Scenes/MapB_Cyberpunk.unity
+    guid: a81f0848bb8584321b8ec4d8db32d9d6
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0

@@ -5,21 +5,27 @@ namespace TsingYun.UnityArena
 {
     public class RuleZoneMarkerRenderer : MonoBehaviour
     {
-        private static readonly Color BlueHealingColor = new Color(0f, 0.25f, 1f, 0.22f);
-        private static readonly Color RedHealingColor = new Color(1f, 0f, 0f, 0.22f);
-        private static readonly Color BoostPointColor = new Color(0f, 1f, 0.8f, 0.28f);
+        private static readonly Color DefaultBlueHealingColor = new Color(0f, 0.25f, 1f, 0.22f);
+        private static readonly Color DefaultRedHealingColor = new Color(1f, 0f, 0f, 0.22f);
+        private static readonly Color DefaultBoostPointColor = new Color(0f, 1f, 0.8f, 0.28f);
 
         private readonly List<RuleZoneMarker> _boostMarkers = new List<RuleZoneMarker>();
         private Transform _markerRoot;
         private RuleZoneMarker _blueHealingMarker;
         private RuleZoneMarker _redHealingMarker;
 
+        public VisualPolishProfile Profile;
+
         public void RenderHealingZones(Vector3 bluePosition, Vector3 redPosition, float healingRadius)
         {
-            _blueHealingMarker = EnsureMarker("HealingZone_Blue", bluePosition, healingRadius, BlueHealingColor);
+            VisualPolishProfile profile = ResolveProfile();
+            Color blue = profile != null ? profile.BlueHealingColor : DefaultBlueHealingColor;
+            Color red = profile != null ? profile.RedHealingColor : DefaultRedHealingColor;
+
+            _blueHealingMarker = EnsureMarker("HealingZone_Blue", bluePosition, healingRadius, blue);
             _blueHealingMarker.ConfigureHealing("blue", healingRadius);
 
-            _redHealingMarker = EnsureMarker("HealingZone_Red", redPosition, healingRadius, RedHealingColor);
+            _redHealingMarker = EnsureMarker("HealingZone_Red", redPosition, healingRadius, red);
             _redHealingMarker.ConfigureHealing("red", healingRadius);
         }
 
@@ -46,7 +52,9 @@ namespace TsingYun.UnityArena
             RuleZoneMarker marker = _boostMarkers[index];
             if (marker == null)
             {
-                marker = EnsureMarker($"BoostPoint_{index + 1}", position, radius, BoostPointColor);
+                VisualPolishProfile profile = ResolveProfile();
+                Color boostColor = profile != null ? profile.BoostColor : DefaultBoostPointColor;
+                marker = EnsureMarker($"BoostPoint_{index + 1}", position, radius, boostColor);
                 _boostMarkers[index] = marker;
             }
             else
@@ -105,12 +113,22 @@ namespace TsingYun.UnityArena
 
         private static Material BuildMarkerMaterial(Color color)
         {
-            var material = new Material(Shader.Find("HDRP/Lit"));
+            Shader shader = Shader.Find("TsingYun/VisualPolishUnlit");
+            if (shader == null) shader = Shader.Find("HDRP/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            var material = new Material(shader);
             material.color = color;
-            material.SetColor("_BaseColor", color);
-            material.SetColor("_EmissionColor", color * 1.8f);
+            if (material.HasProperty("_BaseColor")) material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", color);
+            if (material.HasProperty("_EmissionColor")) material.SetColor("_EmissionColor", color * 1.8f);
+            if (material.HasProperty("_EmissiveColor")) material.SetColor("_EmissiveColor", color * 1.8f);
             material.EnableKeyword("_EMISSION");
             return material;
+        }
+
+        private VisualPolishProfile ResolveProfile()
+        {
+            return Profile != null ? Profile : VisualPolishProfile.CreateRuntimeDefault();
         }
     }
 }

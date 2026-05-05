@@ -33,10 +33,15 @@ namespace TsingYun.UnityArena
         public bool Consumed { get; private set; }
 
         private Rigidbody _rb;
+        private ProjectileTrailVisual _visual;
         private Vector3 _spawnPosition;
         private float _spawnTimeSeconds;
 
-        private void Awake() { _rb = GetComponent<Rigidbody>(); }
+        private void Awake()
+        {
+            _rb = GetComponent<Rigidbody>();
+            _visual = GetComponent<ProjectileTrailVisual>();
+        }
 
         public void Arm(Vector3 initialVelocity, string owningTeam)
         {
@@ -44,6 +49,8 @@ namespace TsingYun.UnityArena
             _spawnTimeSeconds = Time.time;
             Team = owningTeam;
             _rb.linearVelocity = initialVelocity;
+            if (_visual == null) _visual = GetComponent<ProjectileTrailVisual>();
+            if (_visual != null) _visual.OnArmed(initialVelocity, owningTeam);
         }
 
         private void FixedUpdate()
@@ -74,6 +81,8 @@ namespace TsingYun.UnityArena
 
         private void Consume(string reason)
         {
+            if (_visual == null) _visual = GetComponent<ProjectileTrailVisual>();
+            if (_visual != null) _visual.PlayImpact(reason, Team);
             Consumed = true;
             Destroy(gameObject);
         }

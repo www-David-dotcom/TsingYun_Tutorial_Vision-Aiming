@@ -33,6 +33,7 @@ namespace TsingYun.UnityArena
         // Inspector-assigned: the plate body's renderer, for the
         // damage-glow effect driven by chassis HP ratio.
         [SerializeField] private MeshRenderer plateRenderer;
+        [SerializeField] private ArmorPlateVisual plateVisual;
 
         public event Action<int, string> PlateHit;  // damage, sourceTeam
 
@@ -58,13 +59,22 @@ namespace TsingYun.UnityArena
         // up as HP drops so the plate flares as it nears destruction.
         public void RefreshGlow(float t)
         {
+            if (plateVisual == null) plateVisual = GetComponent<ArmorPlateVisual>();
+            if (plateVisual != null)
+            {
+                plateVisual.RefreshGlow(Team, t);
+                return;
+            }
+
             if (plateRenderer == null || plateRenderer.material == null) return;
-            Color teamColor = Team == "red"
-                ? new Color(1.0f, 0.2f, 0.1f)
-                : new Color(0.2f, 0.4f, 1.0f);
-            float energy = Mathf.Lerp(1.5f, 4.5f, 1f - t);
+            Color teamColor = Team == "red" ? Color.red : Color.blue;
+            float energy = Mathf.Lerp(3.0f, 8.5f, 1f - t);
             var mat = plateRenderer.material;
-            mat.SetColor("_EmissionColor", teamColor * energy);
+            mat.color = teamColor;
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", teamColor);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", teamColor);
+            if (mat.HasProperty("_EmissionColor")) mat.SetColor("_EmissionColor", teamColor * energy);
+            if (mat.HasProperty("_EmissiveColor")) mat.SetColor("_EmissiveColor", teamColor * energy);
             mat.EnableKeyword("_EMISSION");
         }
 
@@ -81,6 +91,8 @@ namespace TsingYun.UnityArena
             int damage = projectile.OnArmorHit(this);
             if (damage > 0)
             {
+                if (plateVisual == null) plateVisual = GetComponent<ArmorPlateVisual>();
+                if (plateVisual != null) plateVisual.PulseHit(Team);
                 PlateHit?.Invoke(damage, projectile.Team);
             }
         }

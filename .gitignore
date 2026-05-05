@@ -77,6 +77,25 @@ shared/unity_arena/Assets/Lightmaps/
 *.mdb.meta
 sysinfo.txt
 
+# Development screenshots (transient, not shipped)
+shared/unity_arena/Assets/Screenshots/
+
+# Blender source files (FBX is the shipped asset)
+*.blend
+*.blend1
+
+# Reference images (used during asset creation, not part of the build)
+robot.*
+
+# Planning documents (design specs, roadmaps — transient, not authoritative)
+schema.md
+docs/cleanup-roadmap.md
+docs/assignment-redesign.md
+docs/grading.md
+docs/oss_assets.md
+docs/training-rl.md
+docs/superpowers/
+
 # Synty POLYGON paid asset pack — source redistribution forbidden by license.
 # Maintainer fetches manually before building; CI guard in
 # tools/scripts/check_synty_redistribution.py enforces this.
