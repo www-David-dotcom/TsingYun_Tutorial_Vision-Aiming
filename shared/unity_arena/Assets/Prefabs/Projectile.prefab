@@ -32,7 +32,7 @@ Transform:
   m_GameObject: {fileID: 9033341690358012490}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0.056450278, y: -0.06354815, z: 0}
   m_LocalScale: {x: 0.017, y: 0.017, z: 0.017}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -287,5 +287,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f50a6e932694248e89706e434ff76df0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: TsingYun.UnityArena::TsingYun.UnityArena.ProjectileTrailVisual
-  Profile: {fileID: 11400000, guid: 640b61d1509de479086359a3691ddfdb, type: 2}
-  Trail: {fileID: 1500606155956996326}
+  trail: {fileID: 0}
+  pointLight: {fileID: 0}
